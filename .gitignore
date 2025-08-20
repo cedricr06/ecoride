@@ -1,0 +1,28 @@
+# Dépendances Composer
+/vendor/
+
+# Config sensible
+.env
+
+# Logs
+/storage/logs/
+*.log
+
+# Cache
+/storage/cache/
+*.cache
+
+# Fichiers temporaires
+*.tmp
+*.temp
+*.swp
+
+# IDE / éditeurs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Systèmes
+.DS_Store
+Thumbs.db
