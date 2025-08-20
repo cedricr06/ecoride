@@ -1,0 +1,22 @@
+{
+  "name": "projet-ecoride-(ecf)",
+  "version": "1.0.0",
+  "description": "Plateforme de covoiturage écologique (ECF)",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "sass": "sass --watch public/assets/scss:public/assets/css"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bootstrap": "^5.3.7"
+  },
+  "devDependencies": {
+    "sass": "^1.90.0"
+  }
+}
