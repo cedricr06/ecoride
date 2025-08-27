@@ -1,5 +1,5 @@
 {
-  "name": "projet-ecoride-(ecf)",
+  "name": "projet-ecoride",
   "version": "1.0.0",
   "description": "Plateforme de covoiturage écologique (ECF)",
   "main": "index.js",
@@ -8,7 +8,8 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "sass": "sass --watch public/assets/scss:public/assets/css"
+    "sass": "sass --watch public/assets/SCSS/style.scss:public/assets/CSS/style.css",
+    "sass:watch": "sass --watch public/assets/scss/style.scss:public/assets/css/style.css"
   },
   "keywords": [],
   "author": "",

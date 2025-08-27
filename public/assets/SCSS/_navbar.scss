@@ -1,0 +1,62 @@
+@use "sass:color";
+@use "variables";
+
+// Navbar
+
+.navbar {
+  background-color: #fff;
+
+  .nav-brand {
+    height: 40px;
+  }
+
+  .nav-item {
+    width: auto;
+    .nav-link {
+      color: #333;
+      margin: 0 10px;
+      
+      &:hover {
+        color: variables.$vert;
+      }
+    }
+  }
+
+  .btn {
+    background-color: variables.$vert;
+    border-radius: 9px;
+    font-weight: 600;
+    padding: 6px 14px;
+
+    &:hover {
+      background-color: color.scale(variables.$vert, $lightness: -10%);
+    }
+  }
+}
+
+// mobil
+
+
+@media (max-width: 992px) {
+  .offcanvas {
+    width: 260px !important;
+  }
+  .offcanvas {
+    .navbar-nav {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+  .offcanvas {
+    .nav-item {
+      width: 100%;
+    }
+  }
+
+  .offcanvas {
+    .btn {
+      display: block;
+      width: 100%;
+    }
+  }
+}
