@@ -2,7 +2,11 @@
 @use "variables";
 
 // Navbar
-
+.barre-menu {
+  background-color: variables.$vert;
+  color: #fff;
+  box-shadow: 0px 1px 3px 0px #333;
+}
 .navbar {
   background-color: #fff;
 
@@ -15,7 +19,7 @@
     .nav-link {
       color: #333;
       margin: 0 10px;
-      
+
       &:hover {
         color: variables.$vert;
       }
@@ -34,8 +38,7 @@
   }
 }
 
-// mobil
-
+// mobile
 
 @media (max-width: 992px) {
   .offcanvas {
@@ -57,6 +60,10 @@
     .btn {
       display: block;
       width: 100%;
+    }
+    .btn-close {
+      filter:invert(1)grayscale(100%) brightness(200%);
+      opacity: 9;
     }
   }
 }
