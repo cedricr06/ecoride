@@ -1,0 +1,1 @@
+<?php require BASE_PATH . '/app/Controllers/_deconnexion.ctrl.php'; ?>'

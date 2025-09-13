@@ -1,16 +1,16 @@
-<footer class="footer navbar navbar-dark fixed-bottom">
+<footer class="footer navbar navbar-dark">
   <div class="container d-flex align-items-center justify-content-between py-2">
     <!-- Gauche : logo + copyright -->
     <div class="d-flex align-items-center gap-2 brand">
-      <img class="footer-logo" src="/Projet_ecoride/public/assets/img/EcoRide.png" alt="Logo EcoRide">
+      <a href="<?= BASE_URL ?>/"><img class="footer-logo" src="<?= BASE_URL ?>/assets/img/EcoRide.png" alt="Logo EcoRide"></a>
       <p class="mb-0">© 2025 EcoRide - Tous droits réservés</p>
     </div>
 
     <!-- Desktop (≥992px) : menu à droite -->
     <ul class="navbar-nav ms-auto gap-1 flex-row desktop">
-      <li class="nav-item"><a class="nav-link" href="mention.php">Mentions légales</a></li>
-      <li class="nav-item"><a class="nav-link" href="condition.php">Conditions Générales d'Utilisation</a></li>
-      <li class="nav-item"><a class="nav-link" href="contact.php">Contact</a></li>
+      <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/mention">Mentions légales</a></li>
+      <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/condition">Conditions Générales d'Utilisation</a></li>
+      <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/contact">Contact</a></li>
     </ul>
 
     <!-- Mobile/Tablet (<992px) : bouton hamburger -->
@@ -34,9 +34,9 @@
     </div>
     <div class="offcanvas-body">
       <ul class="navbar-nav d-flex flex-column align-items-start text-start gap-3">
-        <li class="nav-item"><a class="nav-link" href="mention.php" data-bs-dismiss="offcanvas">Mentions légales</a></li>
-        <li class="nav-item"><a class="nav-link" href="condition.php" data-bs-dismiss="offcanvas">CGU</a></li>
-        <li class="nav-item"><a class="nav-link" href="contact.php" data-bs-dismiss="offcanvas">Contact</a></li>
+        <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/mention">Mentions légales</a></li>
+        <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/condition">CGU</a></li>
+        <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/contact">Contact</a></li>
       </ul>
     </div>
   </div>
@@ -44,10 +44,10 @@
 
 
 <!-- JS bootstrap -->
-<script src="/Projet_ecoride/node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= BASE_URL ?>/assets/JS/bootstrap.bundle.min.js"></script>
 
 <!-- Js personnel-->
-<script src="/Projet_ecoride/public/assets/JS/script.js"></script>
+<script src="<?= BASE_URL ?>/assets/JS/script.js"></script>
 
 </body>
 </html>

@@ -1,0 +1,209 @@
+@use "variables";
+
+.head {
+  position: relative;
+  min-height: 560px;
+  color: #fff;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url("../img/road-7349232_1280.jpg") center/cover no-repeat;
+    z-index: 0;
+    transform: scale(1);
+    transition: transform 2s ease-in-out;
+    will-change: transform;
+  }
+  // filtre sombre
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.45) 0%,
+      rgba(0, 0, 0, 0.35) 40%,
+      rgba(0, 0, 0, 0.45) 100%
+    );
+    z-index: 1;
+  }
+}
+.head > * {
+  position: relative;
+  z-index: 2;
+}
+.head.bg-zoom::before {
+  transform: scale(1.1); // zoom progressif
+}
+.titre-recherche {
+  text-align: center;
+  margin-top: 70px;
+  margin-bottom: 20px;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 16px;
+
+  h1 {
+    padding: 5px 15px;
+    background: rgba(0, 0, 0, 0.75);
+    border-radius: 16px;
+    margin: 0;
+  }
+}
+
+/* --- WRAP --- */
+.search-hero {
+  padding-top: 24px;
+  padding-bottom: 24px;
+}
+.forms-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  flex-wrap: nowrap;
+}
+
+/* --- PANNEAUX --- */
+.form-box {
+  width: 360px;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(2px);
+}
+.form-box-title {
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+/* --- CHAMPS --- */
+.form-label {
+  font-weight: 600;
+}
+.input-group-text {
+  background: #fff;
+  border-left: 0;
+}
+.input-group .form-control {
+  border-right: 0;
+}
+
+/* --- BOUTON CENTRE --- */
+.search-btn {
+  min-height: 48px;
+  padding: 0 24px;
+  border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+  width: auto !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-filtre {
+  background: variables.$bleu;
+  border: none;
+  color: #fff;
+
+  &:hover,
+  &:focus,
+  &:active,
+  &.active {
+    background-color: variables.$bleu !important;
+    color: #fff;
+  }
+
+  .show > &.dropdown-toggle {
+    background-color: variables.$bleu !important;
+    color: #fff;
+  }
+}
+
+/* Accessibilité : si l’utilisateur a réduit les animations */
+@media (prefers-reduced-motion: reduce) {
+  #filtersCollapse .form-box {
+    transition: none;
+  }
+}
+
+/* --- TABLETTE --- */
+@media (max-width: 991.98px) {
+  .form-box {
+    width: 320px;
+  }
+  .forms-wrap {
+    gap: 20px;
+  }
+  /* Effet progressif sur le contenu du collapse */
+  #filtersCollapse .form-box {
+    opacity: 0;
+    transform: translateY(-8px); /* petit décalage vers le haut */
+    transition: opacity 2s ease, transform 2s ease;
+  }
+
+  /* Quand le collapse est ouvert */
+  #filtersCollapse.show .form-box {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Pendant l’animation d’ouverture/fermeture */
+  #filtersCollapse.collapsing .form-box {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@media (min-width:768px) and (max-width:991.98px){
+
+  /* Les colonnes cartes : largeur contrôlée, pas full screen */
+  .forms-wrap .col-12.col-lg-5{
+    
+    flex: 0 1 440px;      
+    max-width: 480px;     
+  }
+
+  /* Colonne du milieu (bouton) */
+  .forms-wrap .mid-col{
+    flex: 0 0 auto;       /* pas d’étirement */
+  }
+
+  /* La boîte visuelle */
+  .form-box{
+    width: 100%;
+    border-radius: 12px;
+    background: rgba(0,0,0,.6);
+    padding: 16px;
+  }
+}
+
+
+/* --- MOBILE --- */
+@media (max-width: 767.98px) {
+  .forms-wrap {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    padding-inline: 12px;
+  }
+  .form-box {
+    width: 100%;
+  }
+  .search-btn {
+    align-self: center;
+  }
+  /* Forcer l’affichage du collapse en desktop */
+  .filters-collapse {
+    display: block !important;
+    height: auto !important;
+  }
+}
+
+
+
+
+

@@ -1,0 +1,136 @@
+@use "variables";
+
+.presentation {
+  background-color: #f2f2f2;
+  border-bottom: 1px rgba(0, 0, 0, 0.103) solid;
+}
+
+.avantage {
+  text-align: center;
+
+  .icon-wrapper {
+    background-color: variables.$vert;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    margin: 10px auto 10px auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    img {
+      width: 30px;
+      height: 30px;
+      filter: brightness(0) invert(1);
+    }
+  }
+
+  .titre-avantage {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .texte-avantage {
+    font-size: 0.95;
+    color: #2c3e50;
+  }
+}
+
+.presentation-section {
+  padding: 50px;
+  background-color: #f2f2f2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  .presentation-img {
+    max-width: 80%;
+    margin-right: 50px;
+    border-radius: 16px;
+    box-shadow: 1px 2px 3px #2c3e50;
+  }
+  .presentation-content {
+    text-align: left;
+  }
+}
+
+.liste-avantage-presentation {
+  list-style: none;
+  padding-left: 0;
+
+  li {
+    position: relative;
+    padding-left: 30px;
+    margin-bottom: 10px;
+
+    &::before {
+      content: "✓"; // unicode check
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background-color: variables.$vert;
+      color: #fff;
+      font-size: 14px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}
+@media (max-width: 991.98px) {
+  .presentation-section {
+    min-height: auto;
+  }
+  .presentation-img {
+    margin: 0;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .presentation-img {
+    max-width: 100%!important;     // qu’elle prenne bien toute sa colonne
+    margin-right: 0;     // pas besoin de marge supplémentaire
+  }
+  
+  
+}
+
+@media (max-width: 767.98px) {
+  .presentation-img {
+    max-width: 100%;
+    margin-right: 0;
+  }
+
+  .liste-avantage-presentation {
+    padding-left: 0;
+  }
+
+  .liste-avantage-presentation li {
+    padding-left: 28px;
+  }
+}
+
+@media (max-width: 428.98px) {
+  .presentation-section {
+    .container {
+        padding-right: 0;
+    }
+  }
+  .presentation-section {
+    padding: 20px; // un peu moins de padding sur mobile
+    .row {
+      flex-direction: column; // empile image + texte
+      text-align: left; // texte aligné à gauche
+    }
+
+    .presentation-img {
+      max-width: 100%;
+      margin: 16px auto 16px auto; // centrée + marge en bas
+    }
+  }
+}

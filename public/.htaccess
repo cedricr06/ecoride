@@ -1,0 +1,24 @@
+# /public/.htaccess
+RewriteEngine On
+
+# Si le site est dans un sous-dossier, décommentez et ajustez la ligne suivante.
+# Ex: /Projet_ecoride/public
+RewriteBase /Projet_ecoride/public/
+
+# Laisse passer les fichiers/répertoires réels
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Page d'accueil
+RewriteRule ^$ index.php [QSA,L]
+
+# Tout le reste -> index.php?url=...
+RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]
+
+# Pas d'index de dossier
+Options -Indexes
+
+# Bloque l'exécution de PHP sous /assets et /uploads
+RewriteRule ^assets/.*\.(?:php|phtml|php[0-9])$ - [F,L]
+RewriteRule ^uploads/.*\.(?:php|phtml|php[0-9])$ - [F,L]

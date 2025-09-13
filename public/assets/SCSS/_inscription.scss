@@ -1,0 +1,133 @@
+@use "variables";
+
+.head-inscription{
+  position: relative;
+  min-height: 100vh; // prend tout l’écran
+  color: #fff;
+  background: url("../img/road-7349232_1280.jpg") center/cover no-repeat;
+
+  // overlay sombre
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.45) 0%,
+      rgba(0, 0, 0, 0.35) 40%,
+      rgba(0, 0, 0, 0.45) 100%
+    );
+    z-index: 0; // derrière le contenu
+    pointer-events: none; // ne bloque JAMAIS les clics
+  }
+
+  .bg-dark {
+    background-color: rgba(0, 0, 0, 0.75) !important;
+  }
+
+  .titre-formulaire {
+    color: #fff;
+    padding: 15px;
+  }
+
+  .btn-connexion {
+    // (petit typo dans ton code: "connxion")
+    width: 200px;
+    margin: 10px;
+  }
+
+  .form-container {
+    position: relative;
+    //z-index: 2; // au-dessus de l’overlay
+    width: 100%;
+    max-width: 600px; // plus large
+    margin-inline: auto;
+  }
+}
+
+// (Optionnel) ne force pas les textes "muted" en blanc si tu veux garder le contraste par défaut
+.text-muted {
+     color: #fff !important;
+ }
+
+/* ---- Password eye ---- */
+
+/* 1) Empêcher un overlay de bloquer les clics */
+.head::after {
+  pointer-events: none;
+  z-index: 0;
+}
+.form-container {
+  position: relative;
+  z-index: 2 !important;
+} /* le bloc passe devant */
+
+/* Cacher l’œil natif d’Edge */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+/* Wrapper du champ */
+.password-wrap {
+  position: relative;
+  isolation: isolate; /* évite que des parents perturbent le z-index */
+  overflow: visible; /* ne pas couper le bouton */
+}
+
+/* L’input est sous le bouton et laisse la place à droite */
+.password-wrap .form-control {
+  position: relative;
+  z-index: 0; /* sous le bouton */
+  padding-right: 3rem; /* place pour l’icône */
+}
+
+/* Le bouton œil au-dessus de l’input */
+.password-wrap .eye-btn {
+  position: absolute;
+  top: 32px;
+  bottom: 0;
+  left:auto;
+  inset-inline-end: 12px;          /* = right:12px (RTL-safe) */
+  inset-inline-start: auto;
+  margin-block: auto;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  line-height: 0;
+  z-index: 3;
+
+  /* œil “ouvert” */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M12 5C6.5 5 2 9.5 2 12s4.5 7 10 7 10-4.5 10-7S17.5 5 12 5zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/><circle cx='12' cy='12' r='2.5'/></svg>");
+  &::before {
+    content: "";
+    display: block;
+    width: 20px;
+    height: 20px;
+    margin: auto;
+    background: currentColor;
+    /* Safari/Chromium */
+    -webkit-mask: no-repeat center / 20px 20px
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 5C6.5 5 2 9.5 2 12s4.5 7 10 7 10-4.5 10-7S17.5 5 12 5zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/><circle cx='12' cy='12' r='2.5'/></svg>");
+    mask: no-repeat center / 20px 20px
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 5C6.5 5 2 9.5 2 12s4.5 7 10 7 10-4.5 10-7S17.5 5 12 5zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/><circle cx='12' cy='12' r='2.5'/></svg>");
+  }
+
+  /* Thèmes/fonds : change juste la couleur */
+  .bg-dark .eye-btn {
+    color: #fff;
+  }
+}
+/* œil “barré” quand actif */
+.password-wrap .eye-btn.is-on {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M3 4.3 4.3 3 21 19.7 19.7 21 16.9 18.2A11.7 11.7 0 0 1 12 19c-5.5 0-10-4.5-10-7 0-1.2.7-2.6 2-3.9l2.6 2.6A5 5 0 0 0 12 17c1.1 0 2.1-.3 3-.8l-1.8-1.8a3 3 0 1 1-4.2-4.2L7.2 7.4 3 4.3zM21.9 12c-.3.9-1.1 2.1-2.4 3.3l-2.5-2.5a5 5 0 0 0-5.3-5.3L9.2 5.1c.9-.1 1.8-.1 2.8-.1 5.5 0 10 4.5 10 7z'/></svg>");
+  color: black !important;
+}
+/* œil “barré” quand actif : on change le mask du ::before */
+.password-wrap .eye-btn.is-on::before{
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M3 4.3 4.3 3 21 19.7 19.7 21 16.9 18.2A11.7 11.7 0 0 1 12 19c-5.5 0-10-4.5-10-7 0-1.2.7-2.6 2-3.9l2.6 2.6A5 5 0 0 0 12 17c1.1 0 2.1-.3 3-.8l-1.8-1.8a3 3 0 1 1-4.2-4.2L7.2 7.4 3 4.3zM21.9 12c-.3.9-1.1 2.1-2.4 3.3l-2.5-2.5a5 5 0 0 0-5.3-5.3L9.2 5.1c.9-.1 1.8-.1 2.8-.1 5.5 0 10 4.5 10 7z'/></svg>");
+          mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M3 4.3 4.3 3 21 19.7 19.7 21 16.9 18.2A11.7 11.7 0 0 1 12 19c-5.5 0-10-4.5-10-7 0-1.2.7-2.6 2-3.9l2.6 2.6A5 5 0 0 0 12 17c1.1 0 2.1-.3 3-.8l-1.8-1.8a3 3 0 1 1-4.2-4.2L7.2 7.4 3 4.3zM21.9 12c-.3.9-1.1 2.1-2.4 3.3l-2.5-2.5a5 5 0 0 0-5.3-5.3L9.2 5.1c.9-.1 1.8-.1 2.8-.1 5.5 0 10 4.5 10 7z'/></svg>");
+}
