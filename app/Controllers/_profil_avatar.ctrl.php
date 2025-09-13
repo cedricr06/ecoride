@@ -105,5 +105,8 @@ if ($oldPath && $oldPath !== $webPath) {
 $upd = $db->prepare('UPDATE utilisateurs SET avatar_path = :p WHERE id = :id');
 $upd->execute([':p'=>$webPath, ':id'=>$uid]);
 
+$_SESSION['user']['avatar_path'] = $webPath;
+
 flash('success','Photo mise à jour.');
-redirect('profil'); exit;
+redirect('profil'); 
+exit;

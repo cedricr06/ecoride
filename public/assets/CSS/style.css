@@ -233,6 +233,9 @@
   flex-wrap: nowrap;
   row-gap: 0rem;
 }
+.footer .navbar-nav {
+  flex: 0 0 auto;
+}
 .footer .navbar-nav .nav-link {
   color: #ffffff;
   padding: 0;
@@ -810,6 +813,7 @@ input[type=password]::-ms-clear {
 /* === Palette EcoRide (rappels visuels de ta home) === */
 .profile {
   margin-top: 100px !important;
+  flex: 1;
   --radius: 16px;
   /* Avatar initiales */
   /* Barre de progression des crédits */
@@ -827,8 +831,9 @@ input[type=password]::-ms-clear {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
 }
 .profile__avatar {
-  width: 60px;
-  height: 60px;
+  margin-right: 50px;
+  width: 100px;
+  height: 100px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -837,6 +842,13 @@ input[type=password]::-ms-clear {
   background: linear-gradient(135deg, #27AE60 0%, #2b6cb0 100%);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+.profile .profile__avatar img.avatar-img {
+  border-radius: 50%;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .profile .mail-profil {
   color: #1f3342 !important;
@@ -943,39 +955,8 @@ input[type=password]::-ms-clear {
   border-color: #27AE60;
 }
 
-/* Footer sticky UNIQUEMENT sur la page profil */
-.page-profil {
-  min-height: 40vh;
-  display: flex;
-  flex-direction: column;
-}
-
 .page-profil main {
   flex: 1 0 auto; /* le contenu pousse */
-}
-
-.page-profil footer {
-  margin-top: auto; /* colle le footer en bas si le contenu est court */
-}
-
-.profile__avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #1f8b6e, #2fa572);
-  color: #fff;
-  font-weight: 700;
-}
-
-.profile__avatar img.avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
 }
 
 /* Petites retouches responsive */
@@ -987,26 +968,37 @@ input[type=password]::-ms-clear {
     padding: 0.6rem 0.75rem;
   }
 }
+/* si ta navbar est fixed-top */
 header {
   margin-top: 56px;
+}
+
+/* === Sticky footer – version propre === */
+html, body {
+  height: 100%;
 }
 
 body {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  min-height: 100dvh; /* dvh gère mieux le mobile que vh */
   font-family: "roboto", system-ui, sans-serif;
   font-weight: 500;
   line-height: 1.6;
   color: #111;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
+main {
+  flex: 1 0 auto; /* pousse le footer en bas quand contenu court */
+}
+
+/* ton footer */
+.footer {
+  margin-top: auto; /* colle en bas */
+}
+
+/* Titres */
+h1, h2, h3, h4, h5, h6 {
   font-family: "poppins", system-ui, sans-serif;
   font-weight: 700;
   line-height: 1.3;

@@ -1,7 +1,5 @@
 <?php include_once __DIR__ . '/../includes/header.php'; ?>
 
-
-
 <div class="container profile mt-4">
   <div class="row g-4">
     <!-- Sidebar -->
@@ -28,9 +26,9 @@
               elseif (strpos($p, BASE_URL . '/uploads/') === 0) {
                 $src = $p;
               }
-              // Dernier recours : on tente tel quel
+              // Dernier recours : pr�fixer proprement avec BASE_URL
               else {
-                $src = $p;
+                $src = rtrim(BASE_URL, '/') . '/' . ltrim($p, '/');
               }
               ?>
               <img
@@ -41,7 +39,6 @@
               <?= strtoupper(mb_substr($user['prenom'] ?? 'U', 0, 1) . mb_substr($user['nom'] ?? 'N', 0, 1)) ?>
             <?php endif; ?>
           </div>
-
           <div>
             <h2 class="h5 mb-1"><?= e($user['pseudo'] ?? 'Utilisateur') ?></h2>
             <p class="infos-profil mail-profil mb-0 small"><?= e($user['nom'] ?? '') ?> <?= e($user['prenom'] ?? '') ?></p>

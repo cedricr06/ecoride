@@ -49,31 +49,20 @@ function profile_fetch(PDO $db, int $userId): array {
 /** Prépare le contexte pour la vue profil */
 function profile_prepare(PDO $db, array $authUser): array {
     $uid = (int)($authUser['id'] ?? 0);
+    if ($uid <= 0) return ['user'=>[], 'profil'=>[], 'prefs'=>[], 'age'=>null, 'permisYears'=>null, 'vehicules'=>[]];
 
-    if ($uid <= 0) {
-        // sécurité : si pas connecté, require_login() plus haut catchera déjà
-        return ['user'=>[], 'profil'=>[], 'prefs'=>[], 'age'=>null, 'permisYears'=>null, 'vehicules'=>[]];
-    }
-
-    $user = user_fetch($db, $uid);
-    if (!$user) {
-        // fallback : au pire, on reprend ce qu’il y a en session
-        $user = $authUser;
-    }
+    $dbUser = user_fetch($db, $uid);          // ← contient avatar_path
+    $user   = array_merge($authUser, $dbUser ?: []); // ← IMPORTANT
 
     [$profil, $prefs] = profile_fetch($db, $uid);
-
-    // calculs dérivés
     $age         = yearsFromDate($profil['date_naissance'] ?? null);
     $permisYears = yearsFromDate($profil['date_permis'] ?? null);
 
-    // véhicules du user
-    $vehicules = [];
     $qv = $db->prepare("SELECT * FROM vehicules WHERE utilisateur_id = ? ORDER BY id DESC");
     $qv->execute([$uid]);
     $vehicules = $qv->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-    return compact('user', 'profil', 'prefs', 'age', 'permisYears', 'vehicules');
+    return compact('user','profil','prefs','age','permisYears','vehicules');
 }
 
 /* -------------------- Handlers POST -------------------- */

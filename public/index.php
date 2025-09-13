@@ -63,6 +63,7 @@ $router->add('deconnexion',     BASE_PATH . '/app/Views/pages/deconnexion.php');
 // GET /profil  → prépare $ctx et affiche la vue
 if ($method === 'GET' && $path === '/profil') {
     require BASE_PATH . '/app/Controllers/_profil.ctrl.php'; // prépare $ctx
+    $ctx = profile_prepare($db, $_SESSION['user'] ?? []);
     extract($ctx);
     require BASE_PATH . '/app/Views/pages/profil.php';
     exit;
