@@ -209,6 +209,8 @@ function vehicle_update(PDO $db, array $authUser, int $id, array $post): void {
     header('Location: '.url('profil').'#tab-vehicules'); exit;
 }
 
+
+
 function profile_role_update(PDO $db, array $authUser, array $post): void {
     require_post();
     if (function_exists('verify_csrf')) verify_csrf();
@@ -217,18 +219,25 @@ function profile_role_update(PDO $db, array $authUser, array $post): void {
     $uid = (int)$authUser['id'];
 
     $allowed = ['passager','chauffeur','lesdeux'];
-    $role = strtolower(trim($post['role'] ?? ''));
-    if (!in_array($role, $allowed, true)) {
-        if (function_exists('flash')) flash('error','Rôle invalide.');
+    $roleCov = strtolower(trim($post['role'] ?? ''));
+    if (!in_array($roleCov, $allowed, true)) {
+        if (function_exists('flash')) flash('error','Choix invalide.');
         header('Location: '.url('profil').'?error=role#tab-voyages'); exit;
     }
 
-    $q = $db->prepare("UPDATE utilisateurs SET role=:role WHERE id=:id");
-    $q->execute(['role'=>$role,'id'=>$uid]);
+    // upsert dans preferences.role_covoiturage
+    $exists = $db->prepare("SELECT id FROM preferences WHERE utilisateur_id=?");
+    $exists->execute([$uid]);
+    if ($exists->fetchColumn()) {
+        $q = $db->prepare("UPDATE preferences SET role_covoiturage=:r WHERE utilisateur_id=:id");
+    } else {
+        $q = $db->prepare("INSERT INTO preferences (utilisateur_id, role_covoiturage) VALUES (:id, :r)");
+    }
+    $q->execute(['r'=>$roleCov, 'id'=>$uid]);
 
-    $_SESSION['user']['role'] = $role;
+    $_SESSION['prefs']['role_covoiturage'] = $roleCov;
 
-    if (function_exists('flash')) flash('success','Rôle mis à jour.');
+    if (function_exists('flash')) flash('success','Rôle covoiturage mis à jour.');
     header('Location: '.url('profil').'?role=ok#tab-voyages'); exit;
 }
 
