@@ -121,6 +121,20 @@ if (!function_exists('require_login')) {
         }
     }
 }
+if (!function_exists('require_admin')) {
+    function require_admin() {
+        // Exige une session active
+        require_login();
+
+        $role = $_SESSION['user']['role'] ?? '';
+        if ($role !== 'administrateur') {
+            // Option: rediriger vers /profil
+            // header('Location: ' . url('profil')); exit;
+            http_response_code(403);
+            exit('403 - Accès refusé (administrateur requis).');
+        }
+    }
+}
 if (!function_exists('guest_only')) {
     function guest_only() {
         if (!empty($_SESSION['user'])) {

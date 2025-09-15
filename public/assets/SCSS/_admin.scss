@@ -1,0 +1,200 @@
+@use "variables";
+
+// Breakpoint spécifique top-cards
+$bp-topcards: 425px;
+
+.info-tab-admin {
+  color: variables.$vert;
+}
+.nav-tabs {
+  .nav-link {
+    color: variables.$gris !important;
+  }
+  .active {
+    color: variables.$bleu !important;
+  }
+}
+.btn-admin {
+  width: 100% !important;
+}
+
+.titre-tableau {
+  th {
+    color: variables.$vert;
+    text-align: center;
+    border-left: 1px solid rgba(73, 72, 72, 0.096);
+    border-right: 1px solid rgba(73, 72, 72, 0.096);
+  }
+}
+.tableau-utilisateurs {
+  td {
+    border-left: 1px solid rgba(73, 72, 72, 0.096);
+    border-right: 1px solid rgba(73, 72, 72, 0.096);
+  }
+}
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; /* espace entre les boutons */
+}
+/* Empile par défaut, passe en 2 colonnes ≥1152px */
+.admin-sidebar {
+  display: grid;
+  grid-template-columns: 1fr; /* empilé */
+  gap: 1rem; /* espace entre cartes */
+
+  /* cartes pleine hauteur quand côte à côte */
+  .card {
+    height: 100%;
+  }
+}
+
+
+/* Par défaut (≥ 1152px) tu restes sur le grid Bootstrap: 
+   col-lg-4 / col-lg-8 => 2 colonnes */
+.admin-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+/* ===== breakpoints ===== */
+// Remplacé par $bp-topcards ci-dessus
+
+/* ===== haut de page : 2 cartes ===== */
+/* wrapper autour des 2 cartes (gauche = identité, droite = aperçu rapide) */
+.top-cards {
+  display: grid;
+  grid-template-columns: 1fr;   /* <425px : empilé */
+  gap: .75rem;
+
+  .card { height: 100%; }
+}
+.profile__avatar-admin{
+  margin-right: 0px;
+}
+
+/* Carte de gauche : avatar + texte */
+.admin-identity {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-direction: column;  /* défaut : mobile */
+  text-align: center;
+
+  .profile__avatar { flex: 0 0 auto; }
+  .identity-text   { flex: 1 1 auto; }
+}
+
+.list-unstyled{
+  text-align: justify !important;
+  margin-left: 50px!important;
+}
+
+/* À partir de 1152px et en-dessous,
+   on empile: droite passe sous gauche */
+@media (max-width: 1152px) {
+  .admin-grid > [class*="col-lg-"] {
+    /* écrase la largeur des colonnes lg */
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  /* espaces cohérents */
+  .admin-grid > * {
+    margin-bottom: 1rem;
+  }
+  .admin-sidebar {
+    grid-template-columns: 1fr 1fr; /* deux colonnes */
+    align-items: stretch;
+  }
+}
+
+/*  1152px le contenu "pousse" visuellement */
+@media (min-width: 992px) and (max-width: 1299.98px) {
+  .container {
+    max-width: 1140px; /* harmonieux autour de 1152 */
+  }
+}
+/* desktop/tablette (≥425px) */
+@media (min-width: 425px) {
+  .top-cards {
+    grid-template-columns: 1fr 1fr;  /* ≥425px : côte à côte */
+    gap: 1rem;
+  }
+  .admin-identity {
+    flex-direction: row;   /* avatar gauche / texte droite */
+    text-align: left;
+  }
+}
+
+/* === Overrides finaux pour garantir le comportement demandé === */
+.admin-identity {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-direction: column;
+  text-align: center;
+
+  .profile__avatar { flex: 0 0 auto; }
+  .identity-text   { flex: 1 1 auto; }
+}
+
+@media (min-width: 425px) {
+  .admin-identity { flex-direction: row; text-align: left; }
+}
+
+/* <425px : empilé (déjà par défaut, garde pour clarté) */
+@media (max-width: 425px) {
+  .top-cards { grid-template-columns: 1fr; gap: .75rem; }
+  .admin-identity { flex-direction: column; text-align: center; }
+}
+
+/* >1152px : re-empile (1 colonne) */
+@media (min-width: 1153px) {
+  .top-cards { grid-template-columns: 1fr; gap: .75rem; }
+}
+
+/* ===== carte de gauche : avatar + texte ===== */
+.admin-identity {
+  display: flex;
+  align-items: center;
+  gap: 1rem; // avatar ↔ texte
+}
+.admin-identity {
+  flex-direction: column;
+  text-align: center;
+}
+
+
+/* même breakpoint que plus haut si tu l'as */
+$bp-topcards: 425px;
+
+/* Carte identité : texte à gauche partout */
+.admin-identity {
+  display: flex;
+  gap: 1rem;
+
+  /* mobile: pile l’avatar au-dessus MAIS on reste aligné à gauche */
+  flex-direction: column;
+  align-items: flex-start;   /* ← plus de centrage */
+  text-align: left;
+
+  .profile__avatar {
+    margin-bottom: .25rem;   /* petit air entre avatar et texte */
+  }
+
+  .identity-text {
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+  }
+}
+
+/* ≥425px: avatar à gauche / texte à droite (toujours left) */
+@media (min-width: 425px) {
+  .admin-identity {
+    flex-direction: row;
+    align-items: center;     /* aligne verticalement avatar + texte */
+    text-align: left;        /* sécurité au cas où */
+}
+}

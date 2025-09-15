@@ -152,6 +152,53 @@ if ($method === 'POST' && $path === '/profil/avatar') {
 }
 
 // ------------------------------
+// Routes /admin
+// ------------------------------
+// GET /admin → tableau de bord
+if ($method === 'GET' && $path === '/admin') {
+    require_once BASE_PATH . '/app/Controllers/_admin.ctrl.php';
+    require_admin();
+
+    $dashboard = admin_dashboard($db);
+    $users     = admin_list_users($db);
+    // Stats de base (peuvent aussi être chargées via AJAX)
+    $stats     = admin_stats($db);
+
+    require BASE_PATH . '/app/Views/pages/admin.php';
+    exit;
+}
+
+// POST /admin/utilisateurs/suspendre
+if ($method === 'POST' && $path === '/admin/utilisateurs/suspendre') {
+    require_once BASE_PATH . '/app/Controllers/_admin.ctrl.php';
+    admin_suspend_user($db, $_POST);
+    exit;
+}
+
+// POST /admin/utilisateurs/reactiver
+if ($method === 'POST' && $path === '/admin/utilisateurs/reactiver') {
+    require_once BASE_PATH . '/app/Controllers/_admin.ctrl.php';
+    admin_reactivate_user($db, $_POST);
+    exit;
+}
+
+// GET /admin/stats → JSON pour graphiques
+if ($method === 'GET' && $path === '/admin/stats') {
+    require_once BASE_PATH . '/app/Controllers/_admin.ctrl.php';
+    require_admin();
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(admin_stats($db));
+    exit;
+}
+
+// POST /admin/utilisateurs/supprimer
+if ($method === 'POST' && $path === '/admin/utilisateurs/supprimer') {
+    require_once BASE_PATH . '/app/Controllers/_admin.ctrl.php';
+    admin_delete_user($db, $_POST);
+    exit;
+}
+
+// ------------------------------
 // Le reste des pages via Router
 // ------------------------------
 $router->dispatch();

@@ -32,6 +32,9 @@
             </button>
             <ul class="dropdown-menu dropdown-menu-end shadow-sm">
               <li><a class="dropdown-item" href="<?= url('proposer-trajet') ?>">Proposer un trajet</a></li>
+              <?php if (($user['role'] ?? '') === 'administrateur'): ?>
+                <li><a class="dropdown-item" href="<?= url('admin') ?>">Administration</a></li>
+              <?php endif; ?>
               <li><a class="dropdown-item" href="<?= url('profil') ?>">Profil</a></li>
               <li>
                 <hr class="dropdown-divider">
