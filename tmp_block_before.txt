@@ -1,0 +1,10 @@
+                    <!-- Bouton de toggle visible < lg -->
+                    <button class="btn btn-filtre d-lg-none ms-2"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#filtersCollapse"
+                        aria-expanded="false"
+                        aria-controls="filtersCollapse">
+                        Filtres avancés
+                    </button>
+                </div>

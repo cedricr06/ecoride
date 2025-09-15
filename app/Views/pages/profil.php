@@ -44,7 +44,7 @@
             <p class="infos-profil mail-profil mb-0 small"><?= e($user['nom'] ?? '') ?> <?= e($user['prenom'] ?? '') ?></p>
             <p class="infos-profil mail-profil mb-0 small"><?= e($user['email'] ?? '') ?></p>
 
-            <ul class="list-unstyled small info-profil  mb-0">
+            <ul class=" my-0 ps-0 small info-profil  mb-0">
               <?php if ($age !== null): ?>
                 <li>Âge : <strong><?= e($age) ?> ans</strong></li>
               <?php endif; ?>

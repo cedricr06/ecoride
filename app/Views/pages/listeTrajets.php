@@ -2,13 +2,19 @@
 
 <!-- Section recherche -->
 
-<section class="head">
+<section class="head search-hero">
     <div class="container py-3">
         <div class="text-center mb-3">
             <h1 class="titre-recherche d-inline-block px-3 py-2">Rechercher votre trajet</h1>
         </div>
 
-        <form action="covoiturages.php" method="get" class="forms-wrap">
+        <?php
+        $energie  = trim($_GET['energie']  ?? '');
+        $prix_max = trim($_GET['prix_max'] ?? '');
+        $fumeur   = trim($_GET['fumeur']   ?? '');
+        $filtersOpen = ($energie !== '' || $prix_max !== '' || $fumeur !== '');
+        ?>
+        <form action="<?= url('trajets') ?>" method="get" class="forms-wrap">
             <div class="row g-4 justify-content-center align-items-stretch flex-lg-nowrap">
 
                 <!-- Colonne gauche -->
@@ -60,7 +66,7 @@
                         type="button"
                         data-bs-toggle="collapse"
                         data-bs-target="#filtersCollapse"
-                        aria-expanded="false"
+                        aria-expanded="<?= $filtersOpen ? 'true' : 'false' ?>"
                         aria-controls="filtersCollapse">
                         Filtres avancés
                     </button>
@@ -68,7 +74,7 @@
 
                 <!-- Colonne droite -->
                 <div class="col-12 col-lg-5">
-                    <div id="filtersCollapse" class="collapse d-lg-flex">
+                    <div id="filtersCollapse" class="collapse d-lg-flex filters-advanced <?= $filtersOpen ? 'show' : '' ?>">
                         <div class="form-box w-100 h-100">
                             <h6 class="form-box-title">Filtres avancés</h6>
 
@@ -136,6 +142,214 @@
 
 
 
+
+
+
+
+<?php
+// Récupération des critères (compatibilité noms existants)
+$ville_depart  = trim((string)($_GET['ville_depart'] ?? $_GET['depart'] ?? ''));
+$ville_arrivee = trim((string)($_GET['ville_arrivee'] ?? $_GET['arrivee'] ?? ''));
+$date          = trim((string)($_GET['date'] ?? ''));
+$energie       = trim((string)($_GET['energie'] ?? $_GET['motorisation'] ?? ''));
+$prix_max      = trim((string)($_GET['prix_max'] ?? $_GET['prix'] ?? ''));
+$fumeur        = trim((string)($_GET['fumeur'] ?? ''));
+if ($fumeur === 'oui') { $fumeur = '1'; }
+if ($fumeur === 'non') { $fumeur = '0'; }
+
+$hasSearch = ($ville_depart !== '' || $ville_arrivee !== '' || $date !== '');
+
+$trajets = [];
+if ($hasSearch) {
+    $pdo = $GLOBALS['db'] ?? (function_exists('db') ? db() : null);
+    if ($pdo instanceof PDO) {
+        $joins = "\n    FROM voyages v\n    JOIN utilisateurs u  ON u.id = v.chauffeur_id\n    LEFT JOIN profils pr ON pr.utilisateur_id = u.id\n    JOIN vehicules ve    ON ve.id = v.vehicule_id\n    LEFT JOIN preferences pf ON pf.utilisateur_id = u.id\n";
+
+        $where = [];
+        $params = [];
+        $where[] = "v.places_disponibles > 0";
+        $where[] = "v.statut = 'ouvert'";
+
+        if ($ville_depart !== '') {
+            $where[] = "v.ville_depart LIKE :vd";
+            $params[':vd'] = '%' . $ville_depart . '%';
+        }
+        if ($ville_arrivee !== '') {
+            $where[] = "v.ville_arrivee LIKE :va";
+            $params[':va'] = '%' . $ville_arrivee . '%';
+        }
+        if ($date !== '') {
+            $where[] = "DATE(v.date_depart) = :d";
+            $params[':d'] = $date;
+        }
+
+        if ($energie !== '') {
+            $where[] = "ve.energie = :energie";
+            $params[':energie'] = $energie;
+        }
+
+        if ($prix_max !== '' && is_numeric($prix_max)) {
+            $where[] = "v.prix <= :prix_max";
+            $params[':prix_max'] = (float)$prix_max;
+        }
+
+        if ($fumeur !== '' && ($fumeur === '0' || $fumeur === '1')) {
+            $where[] = "pf.fumeur = :fumeur";
+            $params[':fumeur'] = (int)$fumeur;
+        }
+
+        $sql = "\n  SELECT\n    v.id, v.ville_depart, v.ville_arrivee,\n    v.date_depart, v.date_arrivee, v.prix, v.places_disponibles, v.statut, v.ecologique,\n    u.pseudo, u.prenom, u.nom,\n    pr.date_naissance, pr.photo_url,\n    ve.marque, ve.modele, ve.couleur, ve.energie\n  $joins\n  " . (count($where) ? 'WHERE ' . implode(' AND ', $where) : '') . "\n  ORDER BY v.date_depart ASC\n  LIMIT 60\n";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $trajets = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+}
+?>
+
+<section class="trajets-list container my-4">
+  <?php if (!$hasSearch): ?>
+    <div class="alert alert-light" role="alert">Renseignez au moins un critère pour lancer une recherche.</div>
+  <?php else: ?>
+    <?php if (empty($trajets)): ?>
+      <div class="alert alert-info" role="alert">Aucun trajet trouvé pour ces critères.</div>
+    <?php else: ?>
+      <div class="trajets-grid">
+        <?php foreach ($trajets as $row): ?>
+          <?php
+          $avatar = '';
+          if (!empty($row['photo_url'])) {
+              $p = (string)$row['photo_url'];
+              if (strpos($p, '/uploads/') === 0) {
+                  $avatar = rtrim(BASE_URL, '/') . $p;
+              } elseif (preg_match('#^https?://#i', $p)) {
+                  $avatar = $p;
+              } elseif (strpos($p, BASE_URL . '/uploads/') === 0) {
+                  $avatar = $p;
+              } else {
+                  $avatar = rtrim(BASE_URL, '/') . '/' . ltrim($p, '/');
+              }
+          }
+
+          $ageText = '';
+          if (!empty($row['date_naissance'])) {
+              $dob = DateTime::createFromFormat('Y-m-d', substr((string)$row['date_naissance'], 0, 10));
+              if ($dob instanceof DateTime) {
+                  $now = new DateTime();
+                  $age = (int)$now->format('Y') - (int)$dob->format('Y');
+                  if ((int)$now->format('md') < (int)$dob->format('md')) { $age--; }
+                  if ($age >= 0) { $ageText = ', ' . $age . ' ans'; }
+              }
+          }
+
+          $dtText = '';
+          if (!empty($row['date_depart'])) {
+              try {
+                  $dt = new DateTime((string)$row['date_depart']);
+                  $dtText = $dt->format('d/m/Y H:i');
+              } catch (Exception $e) {
+                  $dtText = '';
+              }
+          }
+
+          $prix = '';
+          if (isset($row['prix'])) {
+              $p = (string)$row['prix'];
+              if (is_numeric($p)) {
+                  $p = rtrim(rtrim((string)number_format((float)$p, 2, '.', ''), '0'), '.');
+                  $prix = $p . '€';
+              }
+          }
+
+          $vehTxt = trim(implode(' ', array_filter([
+              (string)$row['marque'],
+              (string)$row['modele'],
+          ])));
+          if (!empty($row['couleur'])) { $vehTxt .= ' · ' . (string)$row['couleur']; }
+          $vehTxt .= ' · ' . (string)$row['energie'];
+
+          $reserveUrl = function_exists('url') ? url('trajet/' . (int)$row['id']) : '#';
+          ?>
+
+          <article class="trajet-card card">
+            <?php if (!empty($row['ecologique'])): ?>
+              <span class="trajet-card__eco badge bg-success">Éco</span>
+            <?php endif; ?>
+            <div class="card-body">
+              <div class="d-flex align-items-center gap-3">
+                <div class="trajet-card__avatar">
+                  <?php if ($avatar !== ''): ?>
+                    <img src="<?= e($avatar) ?>" alt="Avatar de <?= e($row['pseudo']) ?>">
+                  <?php else: ?>
+                    <?php
+                      if (!function_exists('initials_from_names')) {
+                        function initials_from_names($prenom, $nom, $pseudo = '') {
+                          $prenom = trim((string)$prenom);
+                          $nom    = trim((string)$nom);
+                          $letters = '';
+                          if (function_exists('mb_strtoupper') && function_exists('mb_substr')) {
+                            if ($prenom !== '') $letters .= mb_strtoupper(mb_substr($prenom, 0, 1, 'UTF-8'), 'UTF-8');
+                            if ($nom !== '')    $letters .= mb_strtoupper(mb_substr($nom, 0, 1, 'UTF-8'), 'UTF-8');
+                            if ($letters === '') {
+                              $s = trim((string)$pseudo);
+                              if ($s !== '') {
+                                $clean  = preg_replace('/[^\pL\s\-_.]+/u', '', $s);
+                                $parts  = preg_split('/[\s\-_.]+/u', (string)$clean, -1, PREG_SPLIT_NO_EMPTY);
+                                foreach ($parts as $p) {
+                                  $letters .= mb_strtoupper(mb_substr($p, 0, 1, 'UTF-8'), 'UTF-8');
+                                  if (mb_strlen($letters, 'UTF-8') >= 2) break;
+                                }
+                                if ($letters === '') $letters = mb_strtoupper(mb_substr($s, 0, 1, 'UTF-8'), 'UTF-8');
+                              }
+                            }
+                          } else {
+                            if ($prenom !== '') $letters .= strtoupper(substr($prenom, 0, 1));
+                            if ($nom !== '')    $letters .= strtoupper(substr($nom, 0, 1));
+                            if ($letters === '') {
+                              $s = trim((string)$pseudo);
+                              if ($s !== '') {
+                                $clean  = preg_replace('/[^A-Za-z0-9\s\-_.]+/', '', $s);
+                                $parts  = preg_split('/[\s\-_.]+/', (string)$clean, -1, PREG_SPLIT_NO_EMPTY);
+                                foreach ($parts as $p) {
+                                  $letters .= strtoupper(substr($p, 0, 1));
+                                  if (strlen($letters) >= 2) break;
+                                }
+                                if ($letters === '') $letters = strtoupper(substr($s, 0, 1));
+                              }
+                            }
+                          }
+                          return $letters !== '' ? $letters : '?';
+                        }
+                      }
+                    ?>
+                    <span class="avatar-initials"><?= e(initials_from_names($row['prenom'] ?? '', $row['nom'] ?? '', $row['pseudo'] ?? '')) ?></span>
+                  <?php endif; ?>
+                </div>
+                <div class="flex-grow-1">
+                  <div class="trajet-card__title"><?= e($row['pseudo']) ?><?= e($ageText) ?></div>
+                  <div class="trajet-card__route"><?= e($row['ville_depart']) ?> → <?= e($row['ville_arrivee']) ?></div>
+                  <?php if ($dtText !== ''): ?>
+                    <div class="trajet-card__datetime trajet-info small mt-1">Départ: <?= e($dtText) ?></div>
+                  <?php endif; ?>
+                  <div class="vehicule-badge mt-2"><?= e($vehTxt) ?></div>
+                </div>
+              </div>
+
+              <div class="trajet-card__footer mt-3">
+                <span class="trajet-infod">Places restantes: <strong><?= (int)$row['places_disponibles'] ?></strong></span>
+                <a href="<?= e($reserveUrl) ?>" class="btn btn-success btn-sm">Réserver</a>
+              </div>
+
+              <?php if ($prix !== ''): ?>
+                <div class="trajet-card__price"><?= e($prix) ?></div>
+              <?php endif; ?>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+  <?php endif; ?>
+</section>
 
 
 

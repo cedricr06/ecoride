@@ -463,10 +463,17 @@
     margin: 16px auto 16px auto;
   }
 }
+/* =========================================================
+   HERO RECHERCHE (image + filtre sombre)
+   ========================================================= */
 .head {
   position: relative;
   min-height: 560px;
   color: #fff;
+  /* Image de fond */
+  /* Overlay sombre */
+  /* contenu au-dessus des pseudo-éléments */
+  /* petit zoom progressif */
 }
 .head::before {
   content: "";
@@ -485,34 +492,33 @@
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.35) 40%, rgba(0, 0, 0, 0.45) 100%);
   z-index: 1;
 }
-
 .head > * {
   position: relative;
   z-index: 2;
 }
-
 .head.bg-zoom::before {
   transform: scale(1.1);
 }
 
+/* Titre */
 .titre-recherche {
   text-align: center;
-  margin-top: 70px;
-  margin-bottom: 20px;
+  margin: 70px 0 20px;
   background: rgba(0, 0, 0, 0.75);
   border-radius: 16px;
 }
 .titre-recherche h1 {
+  margin: 0;
   padding: 5px 15px;
   background: rgba(0, 0, 0, 0.75);
   border-radius: 16px;
-  margin: 0;
 }
 
-/* --- WRAP --- */
+/* =========================================================
+   WRAP
+   ========================================================= */
 .search-hero {
-  padding-top: 24px;
-  padding-bottom: 24px;
+  padding-block: 24px;
 }
 
 .forms-wrap {
@@ -523,7 +529,9 @@
   flex-wrap: nowrap;
 }
 
-/* --- PANNEAUX --- */
+/* =========================================================
+   PANNEAUX (cartes verre fumé)
+   ========================================================= */
 .form-box {
   width: 360px;
   background: rgba(0, 0, 0, 0.55);
@@ -539,13 +547,17 @@
   margin-bottom: 12px;
 }
 
-/* --- CHAMPS --- */
+/* =========================================================
+   CHAMPS (inputs clairs dans cartes sombres)
+   ========================================================= */
 .form-label {
   font-weight: 600;
 }
 
 .input-group-text {
   background: #fff;
+  color: #6c757d;
+  border-color: #ced4da;
   border-left: 0;
 }
 
@@ -553,7 +565,21 @@
   border-right: 0;
 }
 
-/* --- BOUTON CENTRE --- */
+.form-box .form-control,
+.form-box .form-select {
+  background: #fff;
+  color: #111;
+  border: 1px solid #ced4da;
+}
+
+.form-box .form-control::placeholder {
+  color: #6c757d;
+  opacity: 1;
+}
+
+/* =========================================================
+   BOUTONS
+   ========================================================= */
 .search-btn {
   min-height: 48px;
   padding: 0 24px;
@@ -572,21 +598,102 @@
   color: #fff;
 }
 .btn-filtre:hover, .btn-filtre:focus, .btn-filtre:active, .btn-filtre.active {
-  background-color: #3498DB !important;
+  background: #3498DB !important;
   color: #fff;
 }
 .show > .btn-filtre.dropdown-toggle {
-  background-color: #3498DB !important;
+  background: #3498DB !important;
   color: #fff;
 }
 
-/* Accessibilité : si l’utilisateur a réduit les animations */
+/* =========================================================
+   COLLAPSE (filtres avancés)
+   ========================================================= */
+.filters-advanced {
+  position: static !important; /* pas de position fixe */
+  inset: auto !important;
+  transform: none !important;
+  z-index: auto !important;
+  width: 100%;
+  max-width: 560px;
+  margin: 12px auto 0;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+}
+.filters-advanced .form-label {
+  color: #fff;
+}
+.filters-advanced .input-group-text {
+  background: #fff;
+  color: #6c757d;
+  border-color: #ced4da;
+}
+.filters-advanced .form-control, .filters-advanced .form-select {
+  background: #fff;
+  border: 1px solid #ced4da;
+  color: #111;
+}
+.filters-advanced .form-control::placeholder, .filters-advanced .form-select::placeholder {
+  color: #6c757d;
+}
+
+/* ---------- Animation filtres : uniquement mobile/tablette ---------- */
+@media (max-width: 991.98px) {
+  #filtersCollapse .form-box {
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  #filtersCollapse.show .form-box {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  #filtersCollapse.collapsing .form-box {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+/* ---------- Desktop : toujours visible même sans .show ---------- */
+@media (min-width: 992px) {
+  #filtersCollapse {
+    display: flex !important;
+  }
+  #filtersCollapse .form-box {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+/* Quand les filtres sont ouverts, on ajoute de l’air en bas du hero
+   → l’image de fond “descend” visuellement */
+@media (max-width: 991.98px) {
+  .head {
+    overflow: visible;
+  }
+  #filtersCollapse {
+    margin-top: 12px;
+  }
+}
+/* Fallback si :has() n’est pas supporté */
+@supports not (selector(:has(*))) {
+  @media (max-width: 991.98px) {
+    .head {
+      min-height: 900px;
+      transition: min-height 0.25s ease;
+    } /* ajuste si besoin */
+  }
+}
+/* Accessibilité : réduire les animations si demandé */
 @media (prefers-reduced-motion: reduce) {
   #filtersCollapse .form-box {
     transition: none;
   }
 }
-/* --- TABLETTE --- */
+/* =========================================================
+   RÉPONSIVE
+   ========================================================= */
+/* Tablette */
 @media (max-width: 991.98px) {
   .form-box {
     width: 320px;
@@ -594,42 +701,8 @@
   .forms-wrap {
     gap: 20px;
   }
-  /* Effet progressif sur le contenu du collapse */
-  #filtersCollapse .form-box {
-    opacity: 0;
-    transform: translateY(-8px); /* petit décalage vers le haut */
-    transition: opacity 2s ease, transform 2s ease;
-  }
-  /* Quand le collapse est ouvert */
-  #filtersCollapse.show .form-box {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  /* Pendant l’animation d’ouverture/fermeture */
-  #filtersCollapse.collapsing .form-box {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
 }
-@media (min-width: 768px) and (max-width: 991.98px) {
-  /* Les colonnes cartes : largeur contrôlée, pas full screen */
-  .forms-wrap .col-12.col-lg-5 {
-    flex: 0 1 440px;
-    max-width: 480px;
-  }
-  /* Colonne du milieu (bouton) */
-  .forms-wrap .mid-col {
-    flex: 0 0 auto; /* pas d’étirement */
-  }
-  /* La boîte visuelle */
-  .form-box {
-    width: 100%;
-    border-radius: 12px;
-    background: rgba(0, 0, 0, 0.6);
-    padding: 16px;
-  }
-}
-/* --- MOBILE --- */
+/* Mobile */
 @media (max-width: 767.98px) {
   .forms-wrap {
     flex-direction: column;
@@ -643,12 +716,114 @@
   .search-btn {
     align-self: center;
   }
-  /* Forcer l’affichage du collapse en desktop */
-  .filters-collapse {
-    display: block !important;
-    height: auto !important;
+}
+/* Petit padding sur le conteneur des filtres en très petit écran */
+@media (max-width: 575.98px) {
+  .filters-advanced {
+    padding: 0.25rem;
   }
 }
+/* =========================================================
+   LISTE DES TRAJETS
+   ========================================================= */
+.trajets-list {
+  padding: 12px 0 28px;
+}
+
+.trajets-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 768px) {
+  .trajets-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1200px) {
+  .trajets-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.trajet-card {
+  position: relative;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  padding: 18px 16px;
+}
+
+.trajet-card__avatar {
+  width: 72px;
+  height: 72px;
+  flex: 0 0 72px;
+  border-radius: 50%;
+  border: 3px solid var(--bs-success);
+  background: radial-gradient(circle at 50% 50%, var(--bs-primary) 0 38px, transparent 39px);
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.trajet-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.trajet-card__avatar .avatar-initials {
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.1rem;
+  line-height: 1;
+  letter-spacing: 0.5px;
+  user-select: none;
+}
+
+.trajet-card__title {
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.trajet-card__route {
+  color: #333;
+}
+
+.vehicule-badge {
+  display: inline-block;
+  background: rgba(13, 110, 253, 0.1);
+  color: #0d6efd;
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  line-height: 1.2;
+}
+
+.trajet-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.trajet-card__price {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  font-weight: 700;
+}
+
+.trajet-card__eco {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 0.8rem;
+}
+
+.trajet-info {
+  color: #333;
+}
+
 .head-inscription {
   position: relative;
   min-height: 100vh;
@@ -922,6 +1097,12 @@ input[type=password]::-ms-clear {
 .profile__vehicle {
   border: 1px solid #e8edf2;
   border-radius: 14px;
+}
+
+ul {
+  text-align: justify !important;
+  list-style-type: none;
+  margin-left: none !important;
 }
 
 /* Badge éco (électrique) */

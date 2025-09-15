@@ -1,28 +1,45 @@
 //bloc qui se depli formulaire recherche trajet mobil/tablette
-(() => {
+document.addEventListener('DOMContentLoaded', function () {
   const head = document.querySelector('.head');
-  const collapse = document.getElementById('filtersCollapse');
-  if (!head || !collapse) return;
+  const coll = document.getElementById('filtersCollapse');
+  if (!head || !coll) return;
 
-  // Après l'ouverture complète → lance le zoom en douceur
-  collapse.addEventListener('shown.bs.collapse', () => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        head.classList.add('bg-zoom');
-      });
-    });
-  });
+  function needMinHeight() {
+    // Desktop : min-height d'origine
+    if (window.innerWidth >= 992) return 560;
 
-  // Dès le début de la fermeture → on dézoome
-  collapse.addEventListener('hide.bs.collapse', () => {
-    head.classList.remove('bg-zoom');
-  });
+    // Si fermé : pas besoin d'augmenter
+    const opening = coll.classList.contains('show') || coll.classList.contains('collapsing');
+    if (!opening) return 560;
 
-  // Sécurité : à la fin de la fermeture, on s'assure que la classe est retirée
-  collapse.addEventListener('hidden.bs.collapse', () => {
-    head.classList.remove('bg-zoom');
-  });
-})();
+    // Géométrie réelle à l'écran (inclut bordures/padding)
+    const headTop = head.getBoundingClientRect().top + window.scrollY;
+    const collBottom = coll.getBoundingClientRect().bottom + window.scrollY;
+
+    // marge de confort
+    const needed = Math.ceil(collBottom - headTop) + 16;
+
+    // ne jamais descendre sous la base
+    return Math.max(560, needed);
+  }
+
+  function apply() {
+    head.style.minHeight = needMinHeight() + 'px';
+    // on supprime tout ancien padding-bottom qu'on aurait mis
+    head.style.paddingBottom = '';
+  }
+
+  // initial + un 2e tick pour laisser finir les transitions
+  apply();
+  requestAnimationFrame(apply);
+
+  // événements Bootstrap + resize + mutation (fallback)
+  ['show.bs.collapse','shown.bs.collapse','hide.bs.collapse','hidden.bs.collapse']
+    .forEach(evt => coll.addEventListener(evt, apply));
+  window.addEventListener('resize', () => requestAnimationFrame(apply));
+  new MutationObserver(() => requestAnimationFrame(apply))
+    .observe(coll, { attributes: true, attributeFilter: ['class'] });
+});
 
 
 

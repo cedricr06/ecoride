@@ -119,6 +119,7 @@ $eco-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
       }
     }
   }
+  
 
   /* Liste des voyages */
   &__list .list-group-item {
@@ -139,6 +140,11 @@ $eco-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
     border-radius: 14px;
   }
 }
+ul{
+    text-align: justify !important;
+    list-style-type: none;
+    margin-left: none !important;
+  }
 
 /* Badge éco (électrique) */
 .badge-eco {
