@@ -268,7 +268,9 @@ if ($hasSearch) {
           if (!empty($row['couleur'])) { $vehTxt .= ' · ' . (string)$row['couleur']; }
           $vehTxt .= ' · ' . (string)$row['energie'];
 
-          $reserveUrl = function_exists('url') ? url('trajet/' . (int)$row['id']) : '#';
+          // Lien vers la page de détails du trajet
+          // - via route "/trajet?id=..." afin d'être compatible avec le Router actuel
+          $reserveUrl = function_exists('url') ? url('trajet') . '?id=' . (int)$row['id'] : 'trajet.php?id=' . (int)$row['id'];
           ?>
 
           <article class="trajet-card card">
@@ -337,7 +339,8 @@ if ($hasSearch) {
 
               <div class="trajet-card__footer mt-3">
                 <span class="trajet-infod">Places restantes: <strong><?= (int)$row['places_disponibles'] ?></strong></span>
-                <a href="<?= e($reserveUrl) ?>" class="btn btn-success btn-sm">Réserver</a>
+                <a href="<?= e(url('trajet') . '?id=' . (int)$row['id']) ?>" class="btn btn-success btn-sm">Réserver</a>
+
               </div>
 
               <?php if ($prix !== ''): ?>

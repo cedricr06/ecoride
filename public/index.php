@@ -46,6 +46,7 @@ $router->add('/',               BASE_PATH . '/app/Views/pages/home.php');
 $router->add('home',            BASE_PATH . '/app/Views/pages/home.php');
 $router->add('trajets',         BASE_PATH . '/app/Views/pages/listeTrajets.php');
 $router->add('proposer-trajet', BASE_PATH . '/app/Views/pages/proposerTrajet.php');
+$router->add('trajet',          BASE_PATH . '/app/Views/pages/trajet.php');
 $router->add('contact',         BASE_PATH . '/app/Views/pages/contact.php');
 $router->add('mention',         BASE_PATH . '/app/Views/pages/mention.php');
 $router->add('condition',       BASE_PATH . '/app/Views/pages/condition.php');
