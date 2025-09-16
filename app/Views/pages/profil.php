@@ -179,21 +179,93 @@
             <!-- VOYAGES -->
             <div class="tab-pane fade show active" id="tab-voyages" role="tabpanel">
               <?php if (empty($voyages)): ?>
-                <div class="text-center infos-profil py-5">Aucun voyage pour le moment.</div>
+                <div class="text-center infos-profil py-5">
+                  <?php
+                  // Helper local minimal au besoin
+                  if (!function_exists('e')) {
+                    function e($v)
+                    {
+                      return htmlspecialchars((string)$v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                    }
+                  }
+                  ?>
+                  <?php if (empty($my_participations)): ?>
+                    <p class="text-muted-admin">Aucun voyage pour le moment.</p>
+                  <?php else: ?>
+                    <div class="list-group profile__list">
+                      <?php foreach ($my_participations as $p): ?>
+                        <div class="list-group-item list-group-item-action d-flex align-items-center justify-content-between flex-wrap gap-2 position-relative">
+                          <!-- toute la carte cliquable -->
+                          <a href="<?= url('trajet?id=' . (int)$p['voyage_id']) ?>" class="stretched-link" aria-label="Voir le trajet"></a>
+
+                          <div class="me-3">
+                            <strong><?= e($p['ville_depart']) ?> → <?= e($p['ville_arrivee']) ?></strong>
+                            <div class="small infos-profil">
+                              Conducteur : <?= e($p['conducteur']) ?> <br>
+                              <?php try {
+                                $d = new DateTime($p['date_depart']);
+                                echo e($d->format('d/m/Y H:i'));
+                              } catch (Throwable $e) {
+                              } ?>
+                              <?php if (isset($p['prix'])): ?> • <?= (int)$p['prix'] ?> crédits<?php endif; ?>
+                            </div>
+                          </div>
+
+                          <div class="d-flex align-items-center gap-2" style="z-index:1;">
+                            <span class="badge <?= $p['statut'] === 'confirme' ? 'bg-success-subtle text-success'
+                                                  : ($p['statut'] === 'en_attente' ? 'bg-warning-subtle text-warning'
+                                                    : 'bg-secondary-subtle text-secondary') ?>">
+                              <?= e(ucfirst($p['statut'])) ?>
+                            </span>
+
+                            <?php if (in_array($p['statut'], ['en_attente', 'confirme'], true)): ?>
+                              <form method="post"
+                                action="<?= e(BASE_URL . '/profil/participations/' . (int)$p['part_id'] . '/supprimer') ?>"
+                                onsubmit="return confirm('Supprimer cette participation ?');"
+                                class="m-0">
+                                <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
+                                <button class="btn btn-outline-danger btn-sm">Annuler votre participation</button>
+                              </form>
+                            <?php endif; ?>
+                          </div>
+                        </div>
+                      <?php endforeach; ?>
+                    </div>
+
+
+                  <?php endif; ?>
+                </div>
               <?php else: ?>
                 <div class="list-group profile__list">
                   <?php foreach ($voyages as $v): ?>
-                    <a href="<?= url('trajet/' . $v['id']) ?>" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                      <div>
+                    <div class="list-group-item list-group-item-action d-flex align-items-center justify-content-between flex-wrap gap-2 position-relative z-1">
+                      <!-- toute la carte cliquable -->
+                      <a href="<?= url('trajet?id=' . (int)$v['id']) ?>" class="stretched-link" aria-label="Voir le trajet"></a>
+
+                      <div class="me-3">
                         <strong><?= e($v['depart']) ?> → <?= e($v['arrivee']) ?></strong>
-                        <div class="small infos-profil"><?= e($v['date']) ?> • <?= e($v['heure']) ?> • <?= (int)$v['prix'] ?> pts</div>
+                        <div class="small infos-profil">
+                          <?= e($v['date']) ?> • <?= e($v['heure']) ?> • <?= (int)$v['prix'] ?> crédits
+                        </div>
                       </div>
-                      <span class="badge <?= $v['eco'] ? 'badge-eco' : 'bg-secondary-subtle text-secondary' ?>">
-                        <?= $v['eco'] ? 'Éco' : 'Standard' ?>
-                      </span>
-                    </a>
+
+                      <div class="d-flex align-items-center gap-2" style="z-index:1;">
+                        <span class="badge <?= $v['eco'] ? 'badge-eco' : 'bg-secondary-subtle text-secondary' ?>">
+                          <?= $v['eco'] ? 'Éco' : 'Standard' ?>
+                        </span>
+
+                        <form method="post"
+                          action="<?= e(BASE_URL . '/profil/voyages/' . (int)$v['id'] . '/annuler') ?>"
+                          onsubmit="return confirm('Annuler ce trajet ?');"
+                          class="m-0">
+                          <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
+                          <button class="btn btn-outline-danger btn-sm">Annuler le trajet</button>
+                        </form>
+                      </div>
+                    </div>
                   <?php endforeach; ?>
                 </div>
+
               <?php endif; ?>
             </div>
 
@@ -409,7 +481,7 @@
                     <label class="form-label">À propos</label>
                     <textarea name="bio" rows="2" maxlength="280" class="form-control"><?= e($profil['bio'] ?? '') ?></textarea>
                   </div>
-                  <div class="col-12 d-flex gap-3">
+                  <!-- <div class="col-12 d-flex gap-3">
                     <label class="form-check">
                       <input class="form-check-input" type="checkbox" name="verifie_identite" <?= !empty($profil['verifie_identite']) ? 'checked' : ''; ?>>
                       <span class="form-check-label">Identité vérifiée</span>
@@ -418,7 +490,7 @@
                       <input class="form-check-input" type="checkbox" name="verifie_tel" <?= !empty($profil['verifie_tel']) ? 'checked' : ''; ?>>
                       <span class="form-check-label">Téléphone vérifié</span>
                     </label>
-                  </div>
+                  </div> -->
                   <div class="col-12">
                     <button class="btn btn-success">Enregistrer</button>
                   </div>

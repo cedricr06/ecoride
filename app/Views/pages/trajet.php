@@ -8,7 +8,8 @@
 // Helpers locaux
 // ---------------------------------------------------------------------
 if (!function_exists('e')) {
-  function e($v) {
+  function e($v)
+  {
     return htmlspecialchars((string)$v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
   }
 }
@@ -116,6 +117,18 @@ if (!$pdo) {
 }
 
 // ---------------------------------------------------------------------
+// Session + utilisateur courant
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+$userId = $_SESSION['user']['id']
+       ?? $_SESSION['utilisateur']['id']
+       ?? $_SESSION['auth']['id']
+       ?? null;
+// Valeurs par défaut pour éviter les notices côté vue
+$isDriver = false;
+$myParticipation = null;
+$placesTotal = 0;
+$placesRestantes = 0;
+// ---------------------------------------------------------------------
 // POST Participer
 // ---------------------------------------------------------------------
 $flash = function (string $type, string $msg) {
@@ -148,7 +161,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['action']) 
   }
 
   $userId = $_SESSION['user']['id'] ?? null; // adapte si ta session stocke différemment
-  if (!$userId) {
+  if (empty($userId)) {
     // Non connecté → redirection vers connexion avec redirect
     $target = (function_exists('url') ? url('connexion') : '../connexion.php');
     $cur = (function_exists('url') ? url('trajet') . '?id=' . $id : 'trajet.php?id=' . $id);
@@ -181,8 +194,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['action']) 
             throw new RuntimeException('Plus de places disponibles.');
           }
 
-          // Déjà inscrit ?
-          $st3 = $pdo->prepare("SELECT 1 FROM {$T_RES} WHERE voyage_id = :v AND passager_id = :u LIMIT 1");
+          // Déjà inscrit ? (ignore les participations annulées)
+          $st3 = $pdo->prepare("SELECT 1 FROM {$T_RES} WHERE voyage_id = :v AND passager_id = :u AND statut IN ('en_attente','confirme') LIMIT 1");
           $st3->execute([':v' => $id, ':u' => $userId]);
           if ($st3->fetch()) {
             throw new RuntimeException('Vous avez déjà une participation pour ce trajet.');
@@ -220,53 +233,43 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['action']) 
 // POST Annuler ma participation
 // ---------------------------------------------------------------------
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST'
-  && isset($_POST['action']) && $_POST['action'] === 'annuler'
-) {
+    && isset($_POST['action']) && $_POST['action'] === 'annuler') {
 
-  if (function_exists('verify_csrf')) {
-    verify_csrf();
-  }
+  if (function_exists('verify_csrf')) verify_csrf();
 
-  $userId = $_SESSION['user']['id'] ?? null;
-  if (!$userId) {
+  // ⚠️ n’écrase pas $userId ici : on utilise celui calculé en haut
+  if (empty($userId)) {
     $flash('danger', "Vous devez être connecté.");
   } else {
     try {
-      // Existe-t-il une participation active pour cet utilisateur ?
-      $st = $pdo->prepare("
-                SELECT id, places, statut
-                FROM participations
-                WHERE voyage_id = :v AND passager_id = :u
-                ORDER BY id DESC LIMIT 1
-            ");
-      $st->execute([':v' => $id, ':u' => $userId]);
-      $row = $st->fetch(PDO::FETCH_ASSOC);
+      $pdo->beginTransaction();
 
-      if (!$row || !in_array($row['statut'], ['en_attente', 'confirme'], true)) {
+      // supprime UNE participation active pour ce voyage & cet utilisateur
+      $del = $pdo->prepare("
+        DELETE FROM {$T_RES}
+        WHERE voyage_id = :v AND passager_id = :u
+          AND statut IN ('en_attente','confirme')
+        LIMIT 1
+      ");
+      $del->execute([':v' => $id, ':u' => $userId]);
+
+      if ($del->rowCount() === 0) {
+        $pdo->rollBack();
         $flash('warning', "Aucune participation active à annuler.");
       } else {
-        $pdo->beginTransaction();
-
-        // 1) passer en 'annule'
-        $upd = $pdo->prepare("
-                    UPDATE participations
-                    SET statut = 'annule'
-                    WHERE id = :pid AND passager_id = :u
-                      AND statut IN ('en_attente','confirme')
-                ");
-        $upd->execute([':pid' => (int)$row['id'], ':u' => (int)$userId]);
-
-        // 2) si tu décrémentes voyages.places_disponibles à l'inscription,
-        //    alors ré-incrémente ici (sinon, COMmente ces 3 lignes).
+        
         $inc = $pdo->prepare("
-                    UPDATE voyages
-                    SET places_disponibles = places_disponibles + :p
-                    WHERE id = :v
-                ");
-        $inc->execute([':p' => (int)($row['places'] ?? 1), ':v' => $id]);
+          UPDATE voyages
+          SET places_disponibles = places_disponibles + 1
+          WHERE id = :v
+        ");
+        $inc->execute([':v' => $id]);
+      
 
         $pdo->commit();
         $flash('success', "Votre participation a été annulée.");
+        header('Location: ' . ((function_exists('url') ? url('trajet') : 'trajet.php') . '?id=' . $id));
+        exit;
       }
     } catch (Throwable $e) {
       if ($pdo->inTransaction()) $pdo->rollBack();
@@ -276,18 +279,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST'
 }
 
 // Participation de l'utilisateur courant (s'il est connecté)
-$myParticipation = null;
-if (!empty($userId)) {
-  $stMy = $pdo->prepare("
-        SELECT id, statut, places
-        FROM participations
-        WHERE voyage_id = :v AND passager_id = :u
-        ORDER BY id DESC LIMIT 1
-    ");
-  $stMy->execute([':v' => $id, ':u' => $userId]);
-  $myParticipation = $stMy->fetch(PDO::FETCH_ASSOC) ?: null;
-}
-
 // ---------------------------------------------------------------------
 // Récupération des données du trajet
 // NOTE: Adapter les noms de tables/colonnes si votre schéma diffère
@@ -312,16 +303,18 @@ $st->execute([':id' => $id]);
 $trip = $st->fetch(PDO::FETCH_ASSOC);
 
 // total = nb de places du véhicule (fallback sur v.places_disponibles si besoin)
-$placesTotal = (int)($trip['veh_places'] ?? ($trip['places_disponibles'] ?? 0));
+if ($trip) {
+  $placesTotal = (int)($trip['veh_places'] ?? ($trip['places_disponibles'] ?? 0));
 
-// places occupées = participations en attente + confirmées
-$stOcc = $pdo->prepare("
+  // places occupées = participations en attente + confirmées
+  $stOcc = $pdo->prepare("
   SELECT COALESCE(SUM(p.places),0)
   FROM participations p
   WHERE p.voyage_id = :v AND p.statut IN ('en_attente','confirme')");
-$stOcc->execute([':v' => $id]);
-$placesOccupees   = (int)$stOcc->fetchColumn();
-$placesRestantes  = max(0, $placesTotal - $placesOccupees);
+  $stOcc->execute([':v' => $id]);
+  $placesOccupees   = (int)$stOcc->fetchColumn();
+  $placesRestantes  = max(0, $placesTotal - $placesOccupees);
+}
 
 
 if (!$trip) {
@@ -331,6 +324,30 @@ if (!$trip) {
   echo '<a class="btn btn-outline-secondary" href="' . (function_exists('url') ? e(url('trajets')) : '../trajets.php') . '">Retour</a></main>';
   include_once __DIR__ . '/../includes/footer.php';
   return;
+}
+
+// Déterminer si l'utilisateur est le conducteur
+$isDriver = !empty($userId) && isset($trip['conducteur_id']) && ((int)$userId === (int)$trip['conducteur_id']);
+
+// Participation de l'utilisateur courant (après chargement du trajet)
+$myParticipation = null;
+if (!empty($userId)) {
+  $stMy = $pdo->prepare("
+        SELECT id, statut, places
+        FROM participations
+        WHERE voyage_id = :v AND passager_id = :u
+        ORDER BY id DESC LIMIT 1
+    ");
+  $stMy->execute([':v' => $id, ':u' => $userId]);
+  $myParticipation = $stMy->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+// Existe-t-il une participation active (en_attente/confirme) ?
+$hasActiveParticipation = false;
+if (!empty($userId)) {
+  $stAct = $pdo->prepare("SELECT 1 FROM participations WHERE voyage_id = :v AND passager_id = :u AND statut IN ('en_attente','confirme') LIMIT 1");
+  $stAct->execute([':v' => $id, ':u' => $userId]);
+  $hasActiveParticipation = (bool)$stAct->fetchColumn();
 }
 
 // Participants (adapter table: reservations/participants)
@@ -456,20 +473,14 @@ include_once __DIR__ . '/../includes/header.php';
         <?php elseif ($isDriver): ?>
           <button class="btn btn-success" disabled title="Vous êtes le conducteur">Participer</button>
 
-        <?php elseif (!$myParticipation || $myParticipation['statut'] === 'annule'): ?>
+        <?php elseif (!$hasActiveParticipation): ?>
           <form method="post" action="" class="d-inline">
             <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
             <input type="hidden" name="action" value="participer">
             <button type="submit" class="btn btn-success">Participer</button>
           </form>
 
-        <?php else: ?>
-          <form method="post" action="" class="d-inline"
-            onsubmit="return confirm('Voulez-vous vraiment annuler votre participation ?');">
-            <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
-            <input type="hidden" name="action" value="annuler">
-            <button type="submit" class="btn btn-outline-danger">Annuler ma participation</button>
-          </form>
+        
         <?php endif; ?>
       </div>
     </div>

@@ -79,6 +79,26 @@ if ($method === 'POST' && $path === '/profil') {
     exit;
 }
 
+// POST /profil/participations/{id}/annuler
+if ($method === 'POST' && preg_match('#^/profil/participations/(\d+)/(?:annuler|supprimer)$#', $path, $m)) {
+    require BASE_PATH . '/app/Controllers/_profil.ctrl.php';
+    if (function_exists('verify_csrf')) verify_csrf();
+    profile_participation_delete($db, (int)$m[1], $_SESSION['user']['id'] ?? 0);
+    header('Location: ' . BASE_URL . '/profil');
+    exit;
+}
+
+// POST /profil/voyages/{id}/annuler
+if ($method === 'POST' && preg_match('#^/profil/voyages/(\d+)/annuler$#', $path, $m)) {
+    require BASE_PATH . '/app/Controllers/_profil.ctrl.php';
+    if (function_exists('verify_csrf')) verify_csrf();
+    profile_voyage_cancel($db, (int)$m[1], $_SESSION['user']['id'] ?? 0);
+    header('Location: ' . BASE_URL . '/profil');
+    exit;
+}
+
+
+
 // POST /profil/enregistrer
 if ($method === 'POST' && $path === '/profil/enregistrer') {
     require BASE_PATH . '/app/Controllers/_profil.ctrl.php';

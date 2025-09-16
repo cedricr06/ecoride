@@ -209,7 +209,7 @@ if ($hasSearch) {
 
 <section class="trajets-list container my-4">
   <?php if (!$hasSearch): ?>
-    <div class="alert alert-light" role="alert">Renseignez au moins un critère pour lancer une recherche.</div>
+    <div class="alert alert-light" role="alert">Renseignez au moins les infos trajet pour lancer une recherche.</div>
   <?php else: ?>
     <?php if (empty($trajets)): ?>
       <div class="alert alert-info" role="alert">Aucun trajet trouvé pour ces critères.</div>
