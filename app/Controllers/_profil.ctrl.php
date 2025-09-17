@@ -7,13 +7,10 @@ global $db;
 function yearsFromDate(?string $date): ?int
 {
     if (!$date) return null;
-    try {
-        $d   = new DateTime($date);
-        $now = new DateTime('today');
-        return (int)$d->diff($now)->y;
-    } catch (Throwable $e) {
-        return null;
-    }
+    $d = DateTime::createFromFormat('Y-m-d', trim($date));
+    if (!$d) return null;
+    $now = new DateTime('today');
+    return max(0, (int)$d->diff($now)->y);
 }
 
 /** Données “de base” de l’utilisateur (table utilisateurs) */
@@ -84,8 +81,8 @@ function profile_save(PDO $db, array $authUser, array $post): void
     $uid = (int)$authUser['id'];
 
     // Validation légère (garde tes règles existantes)
+    // Validation légère (garde tes règles existantes)
     if (!function_exists('validate')) {
-        // fallback : pas d’erreurs bloquantes si le helper n’est pas dispo
         $clean  = $post;
         $errors = [];
     } else {
@@ -95,21 +92,34 @@ function profile_save(PDO $db, array $authUser, array $post): void
             'telephone'      => 'numeros',
             'ville'          => 'string:0,100',
             'bio'            => 'string:0,280',
+            // 'no_permis' => 'bool'   // si ton helper gère, sinon on le traite à la main
         ]);
     }
 
-    // normalisation
-    $clean['date_naissance']  = $clean['date_naissance'] ?: null;
-    $clean['date_permis']     = $clean['date_permis'] ?: null;
-    $clean['verifie_identite'] = isset($post['verifie_identite']) ? 1 : 0;
-    $clean['verifie_tel']     = isset($post['verifie_tel']) ? 1 : 0;
+    // ---- Normalisation dates + "pas de permis"
+    $noPermis = isset($_POST['no_permis']);
+    $dn = trim($_POST['date_naissance'] ?? '');
+    $dp = $noPermis ? '' : trim($_POST['date_permis'] ?? '');
+
+    // formats valides ?
+    if ($dn !== '' && !DateTime::createFromFormat('Y-m-d', $dn)) $dn = '';
+    if ($dp !== '' && !DateTime::createFromFormat('Y-m-d', $dp)) $dp = '';
+
+    $today = date('Y-m-d');
+    // garde-fous
+    if ($dn !== '' && $dn > $today) $dn = '';
+    if ($dp !== '' && $dp > $today) $dp = '';
+    if ($dn !== '' && $dp !== '' && $dp < $dn) $dp = ''; // permis avant naissance -> on annule
+
+    $clean['date_naissance']   = $dn !== '' ? $dn : null;
+    $clean['date_permis']      = $dp !== '' ? $dp : null;
 
     if (!empty($errors)) {
-        // Option simple : message + retour
         if (function_exists('flash')) flash('error', 'Formulaire invalide.');
-        header('Location: ' . url('profil') . '?error=profil#tab-parametres');
+        header('Location: ' . url('profil') . '?error=profil#tab-info'); // (tu peux cibler l’onglet Infos)
         exit;
     }
+
 
     // UPSERT profils
     $stmt = $db->prepare("SELECT 1 FROM profils WHERE utilisateur_id=?");
@@ -118,16 +128,24 @@ function profile_save(PDO $db, array $authUser, array $post): void
     if ($stmt->fetchColumn()) {
         $sql = "UPDATE profils SET
                   date_naissance=:date_naissance, date_permis=:date_permis,
-                  telephone=:telephone, ville=:ville, bio=:bio,
-                  verifie_identite=:verifie_identite, verifie_tel=:verifie_tel
+                  telephone=:telephone, ville=:ville, bio=:bio
                 WHERE utilisateur_id=:uid";
     } else {
         $sql = "INSERT INTO profils
-                (utilisateur_id, date_naissance, date_permis, telephone, ville, bio, verifie_identite, verifie_tel)
-                VALUES (:uid, :date_naissance, :date_permis, :telephone, :ville, :bio, :verifie_identite, :verifie_tel)";
+                (utilisateur_id, date_naissance, date_permis, telephone, ville, bio)
+                VALUES (:uid, :date_naissance, :date_permis, :telephone, :ville, :bio)";
     }
     $stmt_upsert = $db->prepare($sql);
-    $stmt_upsert->execute($clean + ['uid' => $uid]);
+    $params = [
+        ':date_naissance'   => $clean['date_naissance'] ?? null,
+        ':date_permis'      => $clean['date_permis'] ?? null,
+        ':telephone'        => $clean['telephone'] ?? '',
+        ':ville'            => $clean['ville'] ?? '',
+        ':bio'              => $clean['bio'] ?? '',
+        ':uid'              => $uid,
+    ];
+
+    $stmt_upsert->execute($params);
 
     if (function_exists('flash')) flash('success', 'Profil mis à jour.');
     header('Location: ' . url('profil') . '?success=1#tab-parametres');
@@ -148,36 +166,62 @@ function vehicle_add(PDO $db, array $authUser, array $post): void
     $marque  = trim($post['marque']  ?? '');
     $modele  = trim($post['modele']  ?? '');
     $couleur = trim($post['couleur'] ?? '');
-    $immat   = trim($post['immatriculation'] ?? '');
     $energie = trim($post['energie'] ?? '');
     $places  = (int)($post['places'] ?? 4);
     $d1      = trim($post['date_premiere_immatriculation'] ?? '');
 
+    // --- Immat ---
+    $immat_raw = strtoupper(trim($post['immatriculation'] ?? ''));
+
+    // regex FR : SIV (AB-123-CD / AB 123 CD / AB123CD) ou ancien FNI (123 ABC 45, 1234 AB 56, 123 AB 2A, 123 AB 971…)
+    $re_full = '/^(?:[A-Z]{2}[- ]?\d{3}[- ]?[A-Z]{2}|\d{1,4}\s?[A-Z]{1,3}\s?(?:\d{2}|2A|2B|97[1-6]))$/';
+
     $errors = [];
-    if ($marque === '' || $modele === '' || $immat === '' || $energie === '') $errors[] = 'Champs requis manquants.';
+    if ($marque === '' || $modele === '' || $energie === '' || $immat_raw === '') $errors[] = 'Champs requis manquants.';
     if ($places < 1 || $places > 9) $errors[] = 'Nombre de places invalide.';
-    if ($d1 !== '' && !DateTime::createFromFormat('Y-m-d', $d1)) $d1 = null;
-    if ($d1 === '') $d1 = null;
+
+    // date 1re immatriculation
+    if ($d1 === '') {
+        $d1 = null;
+    } elseif (!DateTime::createFromFormat('Y-m-d', $d1)) {
+        $d1 = null;
+    }
+
+    // Valide l’immat
+    if (!preg_match($re_full, $immat_raw)) {
+        $errors[] = 'Immatriculation invalide.';
+    }
+
+    // Normalise ce qui sera stocké (format canonique)
+    $immat_store = null;
+    if (preg_match('/^[A-Z]{2}[- ]?\d{3}[- ]?[A-Z]{2}$/', $immat_raw)) {
+        // SIV -> AA-123-AA
+        $t = preg_replace('/[^A-Z0-9]/', '', $immat_raw);              // ex: AB123CD
+        $immat_store = substr($t, 0, 2) . '-' . substr($t, 2, 3) . '-' . substr($t, 5, 2);
+    } elseif (preg_match('/^(\d{1,4})\s*([A-Z]{1,3})\s*(2A|2B|\d{2}|97[1-6])$/', $immat_raw, $m)) {
+        // FNI -> "123 ABC 45"
+        $immat_store = $m[1] . ' ' . $m[2] . ' ' . $m[3];
+    }
 
     if ($errors) {
-        if (function_exists('flash')) flash('error', 'Formulaire véhicule invalide.');
+        if (function_exists('flash')) flash('error', implode(' ', $errors));
         header('Location: ' . url('profil') . '#tab-vehicules');
         exit;
     }
 
     $sql = "INSERT INTO vehicules
-            (utilisateur_id, marque, modele, couleur, immatriculation, energie, places, date_premiere_immatriculation)
-            VALUES (:uid,:marque,:modele,:couleur,:immatriculation,:energie,:places,:d1)";
+        (utilisateur_id, marque, modele, couleur, immatriculation, energie, places, date_premiere_immatriculation)
+        VALUES (:uid,:marque,:modele,:couleur,:immatriculation,:energie,:places,:d1)";
     $stmt = $db->prepare($sql);
     $stmt->execute([
-        'uid' => $uid,
-        'marque' => $marque,
-        'modele' => $modele,
-        'couleur' => $couleur,
-        'immatriculation' => $immat,
-        'energie' => $energie,
-        'places' => $places,
-        'd1' => $d1,
+        'uid'              => (int)$authUser['id'],
+        'marque'           => $marque,
+        'modele'           => $modele,
+        'couleur'          => $couleur,
+        'immatriculation'  => $immat_store,  // <— la version canonique
+        'energie'          => $energie,
+        'places'           => $places,
+        'd1'               => $d1,
     ]);
 
     if (function_exists('flash')) flash('success', 'Véhicule ajouté.');

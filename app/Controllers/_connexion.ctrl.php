@@ -3,7 +3,7 @@ $errors = []; $data = []; $success_message = '';
 
 list($data, $errors) = form_guard([
   'method' => 'POST',
-  'rate'   => ['key' => 'connexion', 'max' => 5, 'window' => 300],
+  'rate'   => ['key' => 'connexion', 'max' => 5, 'window' => 3],  // nombre de tentatives / temps de blocage
   'rules'  => [
     'email'    => 'required|email',
     'password' => 'required|password:8,72',

@@ -317,8 +317,17 @@
                       <input type="number" min="1" max="9" name="places" class="form-control" value="4" required>
                     </div>
                     <div class="col-md-4">
-                      <label class="form-label">immatriculation</label>
-                      <input type="number" min="9" max="9" name="imatriculation" class="form-control" value="4" required>
+                      <label class="form-label">Immatriculation</label>
+                      <input
+                        type="text"
+                        name="immatriculation"
+                        class="form-control"
+                        required
+                        maxlength="12"
+                        pattern="(?:[A-Za-z]{2}[- ]?\d{3}[- ]?[A-Za-z]{2})|(?:\d{1,4}\s?[A-Za-z]{1,3}\s?(?:\d{2}|2A|2B|97[1-6]))"
+                        title="AB-123-CD / AB 123 CD / AB123CD / 123 ABC 45 / 1234 AB 56 / 123 AB 2A / 123 AB 971"
+                        oninput="this.value=this.value.toUpperCase()"
+                        value="" />
                     </div>
                     <div class="col-md-8">
                       <label class="form-label">Date 1re immatriculation</label>
@@ -408,7 +417,15 @@
                                 </div>
                                 <div class="col-md-4">
                                   <label class="form-label">Immatriculation</label>
-                                  <input name="immatriculation" class="form-control" required maxlength="10" pattern="^[A-Z]{2}-\d{3}-[A-Z]{2}$|^\d{1,4}\s?[A-Z]{2,3}\s?\d{2,3}$" title="Format ex : AB-123-CD (actuel) ou 123 ABC 45 (ancien)">
+                                  <input
+                                    type="text"
+                                    name="immatriculation"
+                                    class="form-control"
+                                    required
+                                    maxlength="12"
+                                    pattern="(?:[A-Za-z]{2}[- ]?\d{3}[- ]?[A-Za-z]{2})|(?:\d{1,4}\s?[A-Za-z]{1,3}\s?(?:\d{2}|2A|2B|97[1-6]))"
+                                    title="Formats acceptés : AB-123-CD / AB 123 CD / AB123CD / 123 ABC 45 / 1234 AB 56 / 123 AB 2A / 123 AB 971"
+                                    oninput="this.value=this.value.toUpperCase()" />
                                 </div>
                                 <div class="col-md-4">
                                   <label class="form-label">Date 1re immatriculation</label>
@@ -463,9 +480,15 @@
                       value="<?= e($profil['date_naissance'] ?? '') ?>">
                   </div>
                   <div class="col-md-6">
+                    <div class="form-check mb-2">
+                      <input class="form-check-input" type="checkbox" id="noPermis" name="no_permis" value="1"
+                        <?= empty($profil['date_permis']) ? 'checked' : '' ?>>
+                      <label class="form-check-label" for="noPermis">Je n’ai pas le permis</label>
+                    </div>
                     <label class="form-label">Date d’obtention du permis</label>
-                    <input type="date" name="date_permis" class="form-control"
-                      value="<?= e($profil['date_permis'] ?? '') ?>">
+                    <input type="date" id="datePermis" name="date_permis" class="form-control"
+                      value="<?= e($profil['date_permis'] ?? '') ?>"
+                      <?= empty($profil['date_permis']) ? 'disabled' : '' ?>>
                   </div>
                   <div class="col-md-6">
                     <label class="form-label">Téléphone</label>
@@ -481,16 +504,7 @@
                     <label class="form-label">À propos</label>
                     <textarea name="bio" rows="2" maxlength="280" class="form-control"><?= e($profil['bio'] ?? '') ?></textarea>
                   </div>
-                  <!-- <div class="col-12 d-flex gap-3">
-                    <label class="form-check">
-                      <input class="form-check-input" type="checkbox" name="verifie_identite" <?= !empty($profil['verifie_identite']) ? 'checked' : ''; ?>>
-                      <span class="form-check-label">Identité vérifiée</span>
-                    </label>
-                    <label class="form-check">
-                      <input class="form-check-input" type="checkbox" name="verifie_tel" <?= !empty($profil['verifie_tel']) ? 'checked' : ''; ?>>
-                      <span class="form-check-label">Téléphone vérifié</span>
-                    </label>
-                  </div> -->
+
                   <div class="col-12">
                     <button class="btn btn-success">Enregistrer</button>
                   </div>

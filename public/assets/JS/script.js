@@ -56,4 +56,11 @@ document.querySelectorAll('.eye-btn').forEach(btn=>{
   });
 });
 
-
+//Bouton j'ai pas le permis profil/info
+document.addEventListener('change', e => {
+  if (e.target.id === 'noPermis') {
+    const d = document.getElementById('datePermis');
+    d.disabled = e.target.checked;
+    if (e.target.checked) d.value = '';
+  }
+});
