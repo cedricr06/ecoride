@@ -57,13 +57,26 @@ function profile_prepare(PDO $db, array $authUser): array
     $age         = yearsFromDate($profil['date_naissance'] ?? null);
     $permisYears = yearsFromDate($profil['date_permis'] ?? null);
 
+    $voyages_view = $_GET['v'] ?? 'upcoming'; 
+    if (!in_array($voyages_view, ['upcoming', 'done', 'canceled', 'all'], true)) {
+        $voyages_view = 'upcoming';
+    }
+
     $qv = $db->prepare("SELECT * FROM vehicules WHERE utilisateur_id = ? ORDER BY id DESC");
     $qv->execute([$uid]);
     $vehicules = $qv->fetchAll(PDO::FETCH_ASSOC) ?: [];
     $my_participations = profile_list_participations($db, $uid);
-    $voyages = profile_list_my_voyages($db, $uid);
+    $voyages = profile_list_my_voyages($db, $uid, $voyages_view);
 
-    return compact('user', 'profil', 'prefs', 'age', 'permisYears', 'vehicules', 'my_participations', 'voyages');
+
+    $voyages_view_label = [
+        'upcoming' => 'À venir',
+        'done'     => 'Historique — effectués',
+        'canceled' => 'Historique — annulés',
+        'all'      => 'Tout',
+    ][$voyages_view];
+
+    return compact('user', 'profil', 'prefs', 'age', 'permisYears', 'vehicules', 'my_participations', 'voyages','voyages_view','voyages_view_label');
 }
 
 /* -------------------- Handlers POST -------------------- */
@@ -602,35 +615,49 @@ function profile_voyage_cancel(PDO $db, int $voyageId, int $uid): void
 }
 
 
-function profile_list_my_voyages(PDO $db, int $uid): array
+function profile_list_my_voyages(PDO $db, int $uid, string $view='upcoming'): array
 {
     if ($uid <= 0) return [];
 
-    $sql = "
-        SELECT
-            v.id,
-            v.ville_depart  AS depart,
-            v.ville_arrivee AS arrivee,
-            DATE_FORMAT(v.date_depart, '%d/%m/%Y') AS date,
-            DATE_FORMAT(v.date_depart, '%H:%i')     AS heure,   -- pas de v.heure !
-            v.prix,
-            CASE
-                WHEN ve.energie IN ('Electrique','Électrique','Hybride','Hybride rechargeable') THEN 1
-                ELSE 0
-            END AS eco
-            FROM voyages v
-            LEFT JOIN vehicules ve ON ve.id = v.vehicule_id
-            WHERE v.chauffeur_id = :u
-                AND (v.statut IS NULL OR v.statut NOT IN ('annule','supprime'))
-            ORDER BY v.date_depart ASC
-            LIMIT 200
-            ";
+    switch ($view) {
+        case 'done':
+            $extra = " AND (v.statut='valide' OR (v.date_depart < NOW() AND (v.statut IS NULL OR v.statut <> 'annule')))";
+            $order = " ORDER BY v.date_depart DESC";
+            break;
+        case 'canceled':
+            $extra = " AND v.statut='annule'";
+            $order = " ORDER BY v.date_depart DESC";
+            break;
+        case 'all':
+            $extra = "";
+            $order = " ORDER BY v.date_depart DESC";
+            break;
+        default: // a venir
+            $extra = " AND v.date_depart >= NOW() AND (v.statut IS NULL OR v.statut <> 'annule')";
+            $order = " ORDER BY v.date_depart ASC";
+    }
 
+    $sql = "
+      SELECT
+        v.id,
+        v.ville_depart  AS depart,
+        v.ville_arrivee AS arrivee,
+        DATE_FORMAT(v.date_depart, '%d/%m/%Y') AS date,
+        DATE_FORMAT(v.date_depart, '%H:%i')     AS heure,
+        v.prix,
+        COALESCE(v.statut,'') AS statut,
+        CASE WHEN ve.energie IN ('Electrique','Électrique','Hybride','Hybride rechargeable') THEN 1 ELSE 0 END AS eco
+      FROM voyages v
+      LEFT JOIN vehicules ve ON ve.id = v.vehicule_id
+      WHERE v.chauffeur_id = :u
+      $extra
+      $order
+      LIMIT 200
+    ";
     $st = $db->prepare($sql);
     $st->execute([':u' => $uid]);
     $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    foreach ($rows as &$r) {
-        $r['eco'] = (bool)$r['eco'];
-    }
+    foreach ($rows as &$r) $r['eco'] = (bool)$r['eco'];
     return $rows;
 }
+

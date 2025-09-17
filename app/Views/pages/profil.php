@@ -178,6 +178,19 @@
           <div class="tab-content mt-3">
             <!-- VOYAGES -->
             <div class="tab-pane fade show active" id="tab-voyages" role="tabpanel">
+              <div class="d-flex justify-content-end mb-2">
+                <div class="dropdown">
+                  <button class="btn btn-light btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                    <?= e($voyages_view_label ?? 'À venir') ?>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item<?= $voyages_view === 'upcoming' ? ' active' : '' ?>" href="<?= url('profil?v=upcoming#tab-voyages') ?>">À venir</a></li>
+                    <li><a class="dropdown-item<?= $voyages_view === 'done' ? ' active' : '' ?>" href="<?= url('profil?v=done#tab-voyages') ?>">Historique — effectués</a></li>
+                    <li><a class="dropdown-item<?= $voyages_view === 'canceled' ? ' active' : '' ?>" href="<?= url('profil?v=canceled#tab-voyages') ?>">Historique — annulés</a></li>
+                    <li><a class="dropdown-item<?= $voyages_view === 'all' ? ' active' : '' ?>" href="<?= url('profil?v=all#tab-voyages') ?>">Tout</a></li>
+                  </ul>
+                </div>
+              </div>
               <?php if (empty($voyages)): ?>
                 <div class="text-center infos-profil py-5">
                   <?php
@@ -249,18 +262,24 @@
                         </div>
                       </div>
 
-                      <div class="d-flex align-items-center gap-2" style="z-index:1;">
+                      <div class="d-flex align-items-center gap-2 position-relative" style="z-index:1;">
                         <span class="badge <?= $v['eco'] ? 'badge-eco' : 'bg-secondary-subtle text-secondary' ?>">
                           <?= $v['eco'] ? 'Éco' : 'Standard' ?>
                         </span>
 
-                        <form method="post"
-                          action="<?= e(BASE_URL . '/profil/voyages/' . (int)$v['id'] . '/annuler') ?>"
-                          onsubmit="return confirm('Annuler ce trajet ?');"
-                          class="m-0">
-                          <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
-                          <button class="btn btn-outline-danger btn-sm">Annuler le trajet</button>
-                        </form>
+                        <?php if ($voyages_view === 'upcoming' && ($v['statut'] ?? '') !== 'annule'): ?>
+                          <form method="post"
+                            action="<?= e(BASE_URL . '/profil/voyages/' . (int)$v['id'] . '/annuler') ?>"
+                            onsubmit="return confirm('Annuler ce trajet ?');"
+                            class="m-0">
+                            <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
+                            <button class="btn btn-outline-danger btn-sm">Annuler le trajet</button>
+                          </form>
+                        <?php else: ?>
+                          <span class="badge <?= ($v['statut'] === 'annule' ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success') ?>">
+                            <?= $v['statut'] === 'annule' ? 'Annulé' : 'Effectué' ?>
+                          </span>
+                        <?php endif; ?>
                       </div>
                     </div>
                   <?php endforeach; ?>
