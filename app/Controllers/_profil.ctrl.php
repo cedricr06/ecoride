@@ -529,37 +529,235 @@ function profile_participation_delete(PDO $db, int $participationId, int $uid): 
     try {
         $db->beginTransaction();
 
-        // On verrouille la ligne pour être safe
         $st = $db->prepare("
-            SELECT p.id, p.voyage_id, p.passager_id, COALESCE(p.places,1) AS places
+            SELECT p.id, p.voyage_id, p.passager_id, p.statut,
+                   COALESCE(p.places,1) AS places,
+                   v.prix, v.date_depart,
+                   COALESCE(v.statut,'') AS voyage_statut,
+                   COALESCE(v.payout_status,'') AS payout_status
             FROM participations p
+            JOIN voyages v ON v.id = p.voyage_id
             WHERE p.id = :id
+              AND p.passager_id = :uid
             FOR UPDATE
         ");
-        $st->execute([':id' => $participationId]);
-        $p = $st->fetch(PDO::FETCH_ASSOC);
+        $st->execute([':id' => $participationId, ':uid' => $uid]);
+        $participation = $st->fetch(PDO::FETCH_ASSOC);
+        $st->closeCursor();
 
-        if (!$p || (int)$p['passager_id'] !== (int)$uid) {
-            throw new RuntimeException("Participation introuvable.");
+        if ($participation) {
+            $statut = (string)($participation['statut'] ?? '');
+            if (!in_array($statut, ['en_attente', 'confirme'], true)) {
+                $db->rollBack();
+                if (function_exists('flash')) flash('warning', "Aucune participation active à annuler.");
+                return;
+            }
+
+            $voyageStatut = (string)($participation['voyage_statut'] ?? '');
+            if ($voyageStatut === 'valide') {
+                $db->rollBack();
+                if (function_exists('flash')) flash('danger', "Annulation impossible : trajet déjà validé.");
+                return;
+            }
+
+            $payoutStatus = (string)($participation['payout_status'] ?? '');
+            if ($payoutStatus === 'released') {
+                $db->rollBack();
+                if (function_exists('flash')) flash('danger', "Annulation impossible : paiement chauffeur déjà effectué.");
+                return;
+            }
+
+            $paid = $db->prepare("SELECT 1 FROM transactions WHERE voyage_id=:vid AND reason='driver_payout' LIMIT 1");
+            $paid->execute([':vid' => (int)$participation['voyage_id']]);
+            $driverPaid = $paid->fetchColumn();
+            $paid->closeCursor();
+            if ($driverPaid) {
+                $db->rollBack();
+                if (function_exists('flash')) flash('danger', "Annulation impossible : paiement chauffeur déjà effectué.");
+                return;
+            }
+
+            $price = (int)$participation['prix'];
+
+            $now = new DateTimeImmutable();
+            try {
+                $departure = new DateTimeImmutable((string)$participation['date_depart']);
+            } catch (Throwable $e) {
+                $departure = $now;
+            }
+            $secondsBeforeDeparture = $departure->getTimestamp() - $now->getTimestamp();
+
+            $commission = 0;
+            if ($secondsBeforeDeparture < 3600) {
+                $commission = 2;
+                if ($price < $commission) {
+                    $commission = max(0, $price);
+                }
+            }
+            $refundAmount = max(0, $price - $commission);
+
+            $lockUser = $db->prepare("SELECT credits FROM utilisateurs WHERE id=:u FOR UPDATE");
+            $lockUser->execute([':u' => $uid]);
+            $userCredits = $lockUser->fetchColumn();
+            $lockUser->closeCursor();
+            if ($userCredits === false) {
+                throw new RuntimeException("Utilisateur introuvable.");
+            }
+
+            $walletStmt = $db->query("SELECT balance FROM site_wallet WHERE id=1 FOR UPDATE");
+            $wallet = $walletStmt->fetch(PDO::FETCH_ASSOC);
+            $walletStmt->closeCursor();
+            if (!$wallet) {
+                throw new RuntimeException("Caisse site introuvable.");
+            }
+            if ($refundAmount > (int)$wallet['balance']) {
+                throw new RuntimeException("Solde site insuffisant pour remboursement.");
+            }
+
+            $db->prepare("UPDATE utilisateurs SET credits = credits + :a WHERE id=:u")
+                ->execute([':a' => $refundAmount, ':u' => $uid]);
+
+            $db->prepare("UPDATE site_wallet SET balance = balance - :a WHERE id=1")
+                ->execute([':a' => $refundAmount]);
+
+            if ($refundAmount > 0) {
+                $db->prepare("INSERT INTO transactions(user_id, voyage_id, amount, direction, reason)
+                              VALUES(:u,:vid,:a,'credit','refund')")
+                    ->execute([':u' => $uid, ':vid' => (int)$participation['voyage_id'], ':a' => $refundAmount]);
+
+                $db->prepare("INSERT INTO transactions(user_id, voyage_id, amount, direction, reason)
+                              VALUES(NULL,:vid,:a,'debit','refund')")
+                    ->execute([':vid' => (int)$participation['voyage_id'], ':a' => $refundAmount]);
+            }
+
+            if ($commission > 0) {
+                $db->prepare("INSERT INTO transactions(user_id, voyage_id, amount, direction, reason)
+                              VALUES(NULL,:vid,:a,'credit','site_commission')")
+                    ->execute([':vid' => (int)$participation['voyage_id'], ':a' => $commission]);
+            }
+
+            $places = (int)$participation['places'];
+            if ($places > 0) {
+                $db->prepare("
+                    UPDATE voyages
+                    SET places_disponibles = places_disponibles + :n
+                    WHERE id = :vid
+                ")->execute([':n' => $places, ':vid' => (int)$participation['voyage_id']]);
+            }
+
+            $db->prepare("DELETE FROM participations WHERE id = :id")
+                ->execute([':id' => (int)$participation['id']]);
+
+            $db->commit();
+            if (function_exists('flash')) flash('success', 'Participation supprimée.');
+            return;
         }
 
-        // Si tu gères les places restantes sur le voyage,
-        // on les rétablit avant de supprimer la participation.
-        $n = (int)$p['places'];
-        if ($n > 0) {
-            $db->prepare("
-                UPDATE voyages
-                SET places_disponibles = places_disponibles + :n
-                WHERE id = :vid
-            ")->execute([':n' => $n, ':vid' => (int)$p['voyage_id']]);
+        $stVoyage = $db->prepare("
+            SELECT v.id, v.chauffeur_id, v.prix, v.date_depart,
+                   COALESCE(v.statut,'') AS statut,
+                   COALESCE(v.payout_status,'') AS payout_status
+            FROM voyages v
+            WHERE v.id = :id
+            FOR UPDATE
+        ");
+        $stVoyage->execute([':id' => $participationId]);
+        $voyage = $stVoyage->fetch(PDO::FETCH_ASSOC);
+        $stVoyage->closeCursor();
+
+        if (!$voyage) {
+            throw new RuntimeException("Voyage introuvable.");
         }
 
-        // Suppression définitive
-        $db->prepare("DELETE FROM participations WHERE id = :id")
-            ->execute([':id' => (int)$p['id']]);
+        if ((int)$voyage['chauffeur_id'] !== (int)$uid) {
+            throw new RuntimeException("Accès refusé.");
+        }
+
+        $voyageStatut = (string)($voyage['statut'] ?? '');
+        if ($voyageStatut === 'annule') {
+            $db->rollBack();
+            if (function_exists('flash')) flash('warning', 'Trajet déjà annulé.');
+            return;
+        }
+        if ($voyageStatut === 'valide') {
+            $db->rollBack();
+            if (function_exists('flash')) flash('danger', "Annulation impossible : trajet déjà validé.");
+            return;
+        }
+        if ((string)($voyage['payout_status'] ?? '') === 'released') {
+            $db->rollBack();
+            if (function_exists('flash')) flash('danger', "Annulation impossible : paiement chauffeur déjà effectué.");
+            return;
+        }
+
+        $paid = $db->prepare("SELECT 1 FROM transactions WHERE voyage_id=:vid AND reason='driver_payout' LIMIT 1");
+        $paid->execute([':vid' => (int)$voyage['id']]);
+        $driverPaid = $paid->fetchColumn();
+        $paid->closeCursor();
+        if ($driverPaid) {
+            $db->rollBack();
+            if (function_exists('flash')) flash('danger', "Annulation impossible : paiement chauffeur déjà effectué.");
+            return;
+        }
+
+        $ps = $db->prepare("
+            SELECT id, passager_id
+            FROM participations
+            WHERE voyage_id = :vid
+              AND statut IN ('en_attente','confirme')
+            FOR UPDATE
+        ");
+        $ps->execute([':vid' => (int)$voyage['id']]);
+        $activeParticipations = $ps->fetchAll(PDO::FETCH_ASSOC);
+        $ps->closeCursor();
+
+        $price = (int)$voyage['prix'];
+        $totalRefund = $price * count($activeParticipations);
+
+        $walletStmt = $db->query("SELECT balance FROM site_wallet WHERE id=1 FOR UPDATE");
+        $wallet = $walletStmt->fetch(PDO::FETCH_ASSOC);
+        $walletStmt->closeCursor();
+        if (!$wallet) {
+            throw new RuntimeException("Caisse site introuvable.");
+        }
+        if ($totalRefund > (int)$wallet['balance']) {
+            throw new RuntimeException("Solde site insuffisant pour remboursement.");
+        }
+
+        $lockPassenger = $db->prepare("SELECT credits FROM utilisateurs WHERE id=:u FOR UPDATE");
+        $creditPassenger = $db->prepare("UPDATE utilisateurs SET credits = credits + :a WHERE id=:u");
+        $insertRefund = $db->prepare("INSERT INTO transactions(user_id, voyage_id, amount, direction, reason)
+                                      VALUES(:u,:vid,:a,'credit','refund')");
+        $insertSiteRefund = $db->prepare("INSERT INTO transactions(user_id, voyage_id, amount, direction, reason)
+                                          VALUES(NULL,:vid,:a,'debit','refund')");
+
+        foreach ($activeParticipations as $part) {
+            $passagerId = (int)$part['passager_id'];
+
+            $lockPassenger->execute([':u' => $passagerId]);
+            $creditsRow = $lockPassenger->fetchColumn();
+            $lockPassenger->closeCursor();
+            if ($creditsRow === false) {
+                throw new RuntimeException("Participant introuvable.");
+            }
+
+            $creditPassenger->execute([':a' => $price, ':u' => $passagerId]);
+            $insertRefund->execute([':u' => $passagerId, ':vid' => (int)$voyage['id'], ':a' => $price]);
+            $insertSiteRefund->execute([':vid' => (int)$voyage['id'], ':a' => $price]);
+        }
+
+        $db->prepare("UPDATE site_wallet SET balance = balance - :a WHERE id=1")
+            ->execute([':a' => $totalRefund]);
+
+        $db->prepare("UPDATE participations SET statut='annule' WHERE voyage_id=:vid AND statut IN ('en_attente','confirme')")
+            ->execute([':vid' => (int)$voyage['id']]);
+
+        $db->prepare("UPDATE voyages SET statut='annule' WHERE id=:vid")
+            ->execute([':vid' => (int)$voyage['id']]);
 
         $db->commit();
-        if (function_exists('flash')) flash('success', 'Participation supprimée.');
+        if (function_exists('flash')) flash('success', 'Trajet annulé.');
+        return;
     } catch (Throwable $e) {
         if ($db->inTransaction()) $db->rollBack();
         if (function_exists('flash')) flash('danger', "Suppression impossible : " . $e->getMessage());
@@ -859,3 +1057,4 @@ function profile_list_my_voyages(PDO $db, int $uid, string $view = 'upcoming'): 
     foreach ($rows as &$r) $r['eco'] = (bool)$r['eco'];
     return $rows;
 }
+
