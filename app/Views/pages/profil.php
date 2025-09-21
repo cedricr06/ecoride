@@ -267,19 +267,27 @@
                           <?= $v['eco'] ? 'Éco' : 'Standard' ?>
                         </span>
 
-                        <?php if ($voyages_view === 'upcoming' && ($v['statut'] ?? '') !== 'annule'): ?>
+                        <?php if (($v['statut'] ?? '') !== 'annule' && ($v['statut'] ?? '') !== 'valide'): ?>
                           <form method="post"
-                            action="<?= e(BASE_URL . '/profil/voyages/' . (int)$v['id'] . '/annuler') ?>"
-                            onsubmit="return confirm('Annuler ce trajet ?');"
+                            action="<?= e(BASE_URL . '/profil/voyages/' . (int)$v['id'] . '/valider') ?>"
+                            onsubmit="return confirm('Valider ce trajet et verser le paiement ?');"
                             class="m-0">
                             <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
-                            <button class="btn btn-outline-danger btn-sm">Annuler le trajet</button>
+                            <button class="btn btn-success btn-sm">J’accepte</button>
                           </form>
                         <?php else: ?>
-                          <span class="badge <?= ($v['statut'] === 'annule' ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success') ?>">
-                            <?= $v['statut'] === 'annule' ? 'Annulé' : 'Effectué' ?>
+                          <span class="badge <?= ($v['statut'] === 'valide' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger') ?>">
+                            <?= $v['statut'] === 'valide' ? 'Effectué' : 'Annulé' ?>
                           </span>
                         <?php endif; ?>
+
+                        <form method="post"
+                          action="<?= e(BASE_URL . '/profil/voyages/' . (int)$v['id'] . '/annuler') ?>"
+                          onsubmit="return confirm('Annuler ce trajet ?');"
+                          class="m-0">
+                          <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
+                          <button class="btn btn-outline-danger btn-sm">Annuler</button>
+                        </form>
                       </div>
                     </div>
                   <?php endforeach; ?>

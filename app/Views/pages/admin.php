@@ -28,10 +28,10 @@ $admin = $_SESSION['user'] ?? [];
           <div class="card-body ">
             <h3 class="h6 mb-3 ">Aperçu rapide</h3>
             <ul class="list-unstyled small mb-0">
-              <li>Total utilisateurs: <strong><?= (int)($dashboard['total_users'] ?? 0) ?></strong></li>
-              <li>Utilisateurs suspendus: <strong><?= (int)($dashboard['suspended_users'] ?? 0) ?></strong></li>
-              <li>Trajets aujourd'hui: <strong><?= (int)($dashboard['rides_today'] ?? 0) ?></strong></li>
-              <li>Crédits (total): <strong><?= (int)($dashboard['total_credits'] ?? 0) ?></strong></li>
+              <li>Total utilisateurs: <strong><?= (int)($dashboard['users_total'] ?? 0) ?></strong></li>
+              <li>Utilisateurs suspendus: <strong><?= (int)($dashboard['users_suspended'] ?? 0) ?></strong></li>
+              <li>Trajets aujourd'hui: <strong><?= (int)($dashboard['trips_today'] ?? 0) ?></strong></li>
+              <li>Crédits (total): <strong><?= (int)($dashboard['site_wallet_balance'] ?? 0) ?></strong></li>
             </ul>
           </div>
         </div>
@@ -78,7 +78,7 @@ $admin = $_SESSION['user'] ?? [];
                   <div class="card">
                     <div class="card-body text-center h-100">
                       <div class=" info-tab-admin small">Utilisateurs</div>
-                      <div class="display-6"><?= (int)($dashboard['total_users'] ?? 0) ?></div>
+                      <div class="display-6"><?= (int)($dashboard['users_total'] ?? 0) ?></div>
                     </div>
                   </div>
                 </div>
@@ -86,7 +86,7 @@ $admin = $_SESSION['user'] ?? [];
                   <div class="card">
                     <div class="card-body text-center h-100">
                       <div class=" info-tab-admin small">Suspendus</div>
-                      <div class="display-6"><?= (int)($dashboard['suspended_users'] ?? 0) ?></div>
+                      <div class="display-6"><?= (int)($dashboard['users_suspended'] ?? 0) ?></div>
                     </div>
                   </div>
                 </div>
@@ -94,15 +94,15 @@ $admin = $_SESSION['user'] ?? [];
                   <div class="card">
                     <div class="card-body text-center h-100">
                       <div class=" info-tab-admin small">Trajets aujourd'hui</div>
-                      <div class="display-6"><?= (int)($dashboard['rides_today'] ?? 0) ?></div>
+                      <div class="display-6"><?= (int)($dashboard['trips_today'] ?? 0) ?></div>
                     </div>
                   </div>
                 </div>
                 <div class="col-6">
                   <div class="card">
                     <div class="card-body text-center h-100">
-                      <div class=" info-tab-admin small">Crédits (total)</div>
-                      <div class="display-6"><?= (int)($dashboard['total_credits'] ?? 0) ?></div>
+                      <div class=" info-tab-admin small">Cagnotte du site</div>
+                      <div class="display-6"><?= (int)($dashboard['site_wallet_balance'] ?? 0) ?></div>
                     </div>
                   </div>
                 </div>

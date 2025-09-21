@@ -120,9 +120,9 @@ if (!$pdo) {
 // Session + utilisateur courant
 if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 $userId = $_SESSION['user']['id']
-       ?? $_SESSION['utilisateur']['id']
-       ?? $_SESSION['auth']['id']
-       ?? null;
+  ?? $_SESSION['utilisateur']['id']
+  ?? $_SESSION['auth']['id']
+  ?? null;
 // Valeurs par défaut pour éviter les notices côté vue
 $isDriver = false;
 $myParticipation = null;
@@ -233,11 +233,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['action']) 
 // POST Annuler ma participation
 // ---------------------------------------------------------------------
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST'
-    && isset($_POST['action']) && $_POST['action'] === 'annuler') {
+  && isset($_POST['action']) && $_POST['action'] === 'annuler'
+) {
 
   if (function_exists('verify_csrf')) verify_csrf();
 
-  // ⚠️ n’écrase pas $userId ici : on utilise celui calculé en haut
+  //  n’écrase pas $userId ici : on utilise celui calculé en haut
   if (empty($userId)) {
     $flash('danger', "Vous devez être connecté.");
   } else {
@@ -257,14 +258,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST'
         $pdo->rollBack();
         $flash('warning', "Aucune participation active à annuler.");
       } else {
-        
+
         $inc = $pdo->prepare("
           UPDATE voyages
           SET places_disponibles = places_disponibles + 1
           WHERE id = :v
         ");
         $inc->execute([':v' => $id]);
-      
+
 
         $pdo->commit();
         $flash('success', "Votre participation a été annulée.");
@@ -474,13 +475,13 @@ include_once __DIR__ . '/../includes/header.php';
           <button class="btn btn-success" disabled title="Vous êtes le conducteur">Participer</button>
 
         <?php elseif (!$hasActiveParticipation): ?>
-          <form method="post" action="" class="d-inline">
+          <form method="post"
+            action="<?= url('trajet/' . (int)$trip['id'] . '/participer') ?>"
+            class="d-inline"
+            onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').textContent = 'Patientez…';">
             <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
-            <input type="hidden" name="action" value="participer">
             <button type="submit" class="btn btn-success">Participer</button>
           </form>
-
-        
         <?php endif; ?>
       </div>
     </div>

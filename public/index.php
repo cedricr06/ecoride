@@ -14,7 +14,7 @@ require_once BASE_PATH . '/app/Router.php';
 
 // (Dev) voir les erreurs si 500
 error_reporting(E_ALL);
-ini_set('display_errors','1');
+ini_set('display_errors', '1');
 
 // ------------------------------
 // Contexte global
@@ -36,7 +36,9 @@ $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
 if ($scriptDir && strpos($path, $scriptDir) === 0) {
     $path = substr($path, strlen($scriptDir));
 }
-if ($path === '' || $path === false) { $path = '/'; }
+if ($path === '' || $path === false) {
+    $path = '/';
+}
 
 // ------------------------------
 // Router simple (pages "vues")
@@ -54,8 +56,7 @@ $router->add('inscription',     BASE_PATH . '/app/Views/pages/inscription.php');
 $router->add('connexion',       BASE_PATH . '/app/Views/pages/connexion.php');
 $router->add('deconnexion',     BASE_PATH . '/app/Views/pages/deconnexion.php');
 
-// ❌ NE PAS router /profil via une simple vue, on passe par le contrôleur
-// $router->add('profil', BASE_PATH . '/app/Views/pages/profil.php');
+
 
 // ------------------------------
 // Routes /profil (unifiées SANS préfixe)
@@ -87,17 +88,33 @@ if ($method === 'POST' && preg_match('#^/profil/participations/(\d+)/(?:annuler|
     header('Location: ' . BASE_URL . '/profil');
     exit;
 }
+// POST /trajet/{id}/participer  (passager)
+if ($method === 'POST' && preg_match('#^/trajet/(\d+)/participer$#', $path, $m)) {
+    require BASE_PATH . '/app/Controllers/_profil.ctrl.php';
+    if (function_exists('verify_csrf')) verify_csrf();
+    trajet_participer($db, (int)$m[1], $_SESSION['user']['id'] ?? 0);
+    header('Location: ' . BASE_URL . '/trajet?id=' . (int)$m[1]);
+    exit;
+}
+
 
 // POST /profil/voyages/{id}/annuler
 if ($method === 'POST' && preg_match('#^/profil/voyages/(\d+)/annuler$#', $path, $m)) {
     require BASE_PATH . '/app/Controllers/_profil.ctrl.php';
     if (function_exists('verify_csrf')) verify_csrf();
-    profile_voyage_cancel($db, (int)$m[1], $_SESSION['user']['id'] ?? 0);
+    profile_participation_delete($db, (int)$m[1], $_SESSION['user']['id'] ?? 0);
     header('Location: ' . BASE_URL . '/profil');
     exit;
 }
 
-
+// POST /profil/voyages/{id}/valider
+if ($method === 'POST' && preg_match('#^/profil/voyages/(\d+)/valider$#', $path, $m)) {
+    require BASE_PATH . '/app/Controllers/_profil.ctrl.php';
+    if (function_exists('verify_csrf')) verify_csrf();
+    profile_voyage_accept($db, (int)$m[1], $_SESSION['user']['id'] ?? 0);
+    header('Location: ' . BASE_URL . '/profil?v=done#tab-voyages'); // retour historique (ou /profil)
+    exit;
+}
 
 // POST /profil/enregistrer
 if ($method === 'POST' && $path === '/profil/enregistrer') {
