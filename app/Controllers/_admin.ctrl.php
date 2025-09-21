@@ -74,6 +74,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'
  | - CSRF is enforced by callers for POST routes
 */
 
+function admin_pending_reviews(array $query): array
+{
+    [, $avis] = mongo();
+
+    $limit = 15;
+    $page = max(1, (int)($query['page'] ?? 1));
+    $filter = ['status' => 'pending'];
+
+    if (isset($query['min']) && $query['min'] !== '') {
+        $min = (int)$query['min'];
+        if ($min > 0) {
+            $filter['rating'] = ['$gte' => $min];
+        }
+    }
+
+    if (isset($query['driver']) && $query['driver'] !== '') {
+        $driverId = (int)$query['driver'];
+        if ($driverId > 0) {
+            $filter['driver_id'] = $driverId;
+        }
+    }
+
+    $total = (int)$avis->countDocuments($filter);
+    if ($total === 0) {
+        return [[], 0, 0, 1];
+    }
+
+    $pages = (int)ceil($total / $limit);
+    if ($pages > 0 && $page > $pages) {
+        $page = $pages;
+    }
+    $page = max(1, $page);
+    $skip = ($page - 1) * $limit;
+
+    if ($total > 0 && $skip >= $total) {
+        $page = max(1, $pages);
+        $skip = ($page - 1) * $limit;
+    }
+
+    $cursor = $avis->find($filter, [
+        'sort' => ['created_at' => -1],
+        'skip' => $skip,
+        'limit' => $limit,
+        'projection' => [
+            'rating' => 1,
+            'comment' => 1,
+            'driver_id' => 1,
+            'rider_id' => 1,
+            'created_at' => 1,
+        ],
+    ]);
+
+    $pending = iterator_to_array($cursor, false);
+
+    return [$pending, $total, $pages, $page];
+}
+
+function admin_csrf_token(): string
+{
+    if (empty($_SESSION['csrf'])) {
+        $_SESSION['csrf'] = bin2hex(random_bytes(32));
+    }
+
+    return (string)$_SESSION['csrf'];
+}
+
 function admin_dashboard(PDO $db): array
 {
     $users_total      = (int)$db->query("SELECT COUNT(*) FROM utilisateurs")->fetchColumn();

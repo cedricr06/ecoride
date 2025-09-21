@@ -202,7 +202,23 @@ if ($method === 'GET' && $path === '/admin') {
     // Stats de base (peuvent aussi être chargées via AJAX)
     $stats     = admin_stats($db);
 
+    try {
+        [$pending, $total, $pages, $page] = admin_pending_reviews($_GET);
+    } catch (Throwable $e) {
+        $pending = [];
+        $total = 0;
+        $pages = 0;
+        $page = 1;
+    }
+    $csrf = admin_csrf_token();
+
     require BASE_PATH . '/app/Views/pages/admin.php';
+    exit;
+}
+
+// POST /admin (moderation actions)
+if ($method === 'POST' && $path === '/admin') {
+    require_once BASE_PATH . '/app/Controllers/_admin.ctrl.php';
     exit;
 }
 

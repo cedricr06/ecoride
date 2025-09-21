@@ -63,7 +63,7 @@ $admin = $_SESSION['user'] ?? [];
               <button class="nav-link" id="tab-stats-tab" data-bs-toggle="tab" data-bs-target="#tab-stats" type="button" role="tab" aria-controls="tab-stats" aria-selected="false">Statistiques</button>
             </li>
             <li class="nav-item" role="presentation">
-              <button class="nav-link" id="avis-en-attente-tab" data-bs-toggle="tab" data-bs-target="#tab-settings" type="button" role="tab" aria-controls="tab-settings" aria-selected="false">Avis en attente (<?= (int)$total ?>)</button>
+              <a class="nav-link" id="avis-en-attente-tab" data-bs-toggle="tab" href="#avis-en-attente" role="tab" aria-controls="avis-en-attente" aria-selected="false" data-count="<?= (int)$total ?>">Avis en attente (<?= (int)$total ?>)</a>
             </li>
             <li class="nav-item" role="presentation">
               <button class="nav-link" id="tab-settings-tab" data-bs-toggle="tab" data-bs-target="#tab-settings" type="button" role="tab" aria-controls="tab-settings" aria-selected="false">Creer compte</button>
@@ -211,7 +211,12 @@ $admin = $_SESSION['user'] ?? [];
             <!-- Avis coté admin -->
 
 
-
+            <div id="admin-mod-ctx"
+              data-endpoint="<?= htmlspecialchars(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ?>"
+              data-count="<?= (int)($total ?? 0) ?>"
+              data-csrf="<?= htmlspecialchars($csrf ?? '', ENT_QUOTES) ?>"
+              data-mid="<?= (int)($_SESSION['user']['id'] ?? 0) ?>">
+            </div>
             <div class="tab-pane fade" id="avis-en-attente" role="tabpanel" aria-labelledby="avis-en-attente-tab">
               <div class="d-flex align-items-center justify-content-between mb-3">
                 <h5 class="mb-0">Avis en attente</h5>
@@ -226,10 +231,9 @@ $admin = $_SESSION['user'] ?? [];
                 </form>
               </div>
 
-              <?php if (!$pending): ?>
-                <div class="alert alert-success">Aucun avis en attente 🎉</div>
-              <?php else: ?>
-                <div class="table-responsive">
+              <div id="pending-empty" class="alert alert-success<?= $pending ? ' d-none' : '' ?>">Aucun avis en attente 🎉</div>
+              <?php if ($pending): ?>
+                <div class="table-responsive" id="pending-table-wrapper">
                   <table class="table align-middle">
                     <thead>
                       <tr>
@@ -277,9 +281,8 @@ $admin = $_SESSION['user'] ?? [];
                     </tbody>
                   </table>
                 </div>
-
                 <?php if ($pages > 1): ?>
-                  <nav>
+                  <nav id="pending-pagination">
                     <ul class="pagination pagination-sm">
                       <?php for ($p = 1; $p <= $pages; $p++): ?>
                         <?php
@@ -305,6 +308,7 @@ $admin = $_SESSION['user'] ?? [];
     </main>
   </div>
 </div>
+
 
 <script>
   // Expose initial stats (server-side) for instant render
