@@ -99,3 +99,54 @@
   }
 })();
 
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.act-approve, .act-reject');
+  if (!btn) return;
+
+  const id = btn.dataset.id;
+  const action = btn.classList.contains('act-approve') ? 'approve' : 'reject';
+
+  // Optionnel : demande raison si rejet
+  let reason = '';
+  if (action === 'reject') {
+    reason = prompt("Raison du rejet (optionnel) :") || '';
+  }
+
+  btn.disabled = true;
+
+  try {
+    const body = new URLSearchParams({
+      action,
+      id,
+      reason,
+      moderator_id: '<?= (int)($_SESSION["user"]["id"] ?? 0) ?>',
+      csrf: '<?= $csrf ?>'
+    });
+
+    const res = await fetch(location.href, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body
+    });
+    const json = await res.json();
+
+    if (!json.ok) {
+      alert('Erreur: ' + (json.error || 'inconnue'));
+      btn.disabled = false;
+      return;
+    }
+
+    // Retire la ligne approuvée/rejetée
+    const row = document.getElementById('row-' + id);
+    if (row) row.remove();
+
+    // Optionnel : petit toast
+    console.log(`Avis ${action} avec succès`, json);
+
+  } catch (err) {
+    console.error(err);
+    alert('Erreur réseau.');
+    btn.disabled = false;
+  }
+});
+

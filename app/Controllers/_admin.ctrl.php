@@ -1,6 +1,72 @@
 <?php
+declare(strict_types=1);
 
+use MongoDB\BSON\ObjectId;
+use MongoDB\BSON\UTCDateTime;
+use MongoDB\Operation\FindOneAndUpdate;
+
+require_once __DIR__ . '/../core/mongo.php';
+require_once __DIR__ . '/../core/bootstrap.php';
+
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 require_admin();
+
+// === Handlers JSON (si pas déjà définis) ===
+if (!function_exists('json_ok')) { function json_ok(array $d=[]) { header('Content-Type: application/json'); echo json_encode(['ok'=>true]+$d); exit; } }
+if (!function_exists('json_err')) { function json_err(string $m,int $c=400){ http_response_code($c); header('Content-Type: application/json'); echo json_encode(['ok'=>false,'error'=>$m]); exit; } }
+
+// === BLOC POST de modération (early return) ===
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['id'])) {
+    if (empty($_SESSION['csrf']) || !hash_equals($_SESSION['csrf'], $_POST['csrf'] ?? '')) {
+        json_err('csrf_invalid', 403);
+    }
+
+    [, $avis, $stats] = mongo();
+    $action = $_POST['action'] === 'approve' ? 'approved' : 'rejected';
+
+    try {
+        try { $id = new ObjectId((string)$_POST['id']); }
+        catch (\Throwable $e) { json_err('invalid_id', 400); }
+
+        $updated = $avis->findOneAndUpdate(
+            ['_id' => $id],
+            ['$set' => [
+                'status'     => $action,
+                'updated_at' => new UTCDateTime(),
+                'moderation' => [
+                    'moderator_id' => (int)($_POST['moderator_id'] ?? 0),
+                    'decided_at'   => new UTCDateTime(),
+                    'reason'       => trim((string)($_POST['reason'] ?? '')),
+                ],
+            ]],
+            ['returnDocument' => FindOneAndUpdate::RETURN_DOCUMENT_AFTER]
+        );
+        if (!$updated) json_err('avis_not_found', 404);
+
+        $driverId = (int)($updated['driver_id'] ?? 0);
+        if ($driverId <= 0) json_err('driver_id_missing', 400);
+
+        $agg = $avis->aggregate([
+            ['$match' => ['driver_id' => $driverId, 'status' => 'approved']],
+            ['$group' => ['_id' => '$driver_id', 'avg' => ['$avg' => '$rating'], 'count' => ['$sum' => 1]]],
+        ])->toArray();
+
+        $avg   = $agg ? (float)$agg[0]['avg']   : 0.0;
+        $count = $agg ? (int)$agg[0]['count']   : 0;
+
+        $stats->updateOne(
+            ['driver_id' => $driverId],
+            ['$set' => ['avg_rating' => $avg, 'count' => $count, 'updated_at' => new UTCDateTime()]],
+            ['upsert' => true]
+        );
+
+        json_ok(['status' => $action, 'driver_id' => $driverId, 'avg' => $avg, 'count' => $count]);
+    } catch (\Throwable $e) {
+        // error_log($e);
+        json_err('db_error', 500);
+    }
+}
+
 
 /*
  | Admin controller helpers
@@ -31,42 +97,7 @@ function admin_dashboard(PDO $db): array
     );
 
     // Total users
-    try {
-        $stats['total_users'] = (int)$db->query('SELECT COUNT(*) FROM utilisateurs')->fetchColumn();
-    } catch (Throwable $e) { /* table may not exist yet */
-    }
-
-    // Suspended users
-    try {
-        $q = $db->query('SELECT COUNT(*) FROM utilisateurs WHERE est_suspendu = 1');
-        $stats['suspended_users'] = (int)$q->fetchColumn();
-    } catch (Throwable $e) {
-    }
-
-    // Total credits (sum of users credits as proxy)
-    try {
-        $q = $db->query('SELECT COALESCE(SUM(credits),0) FROM utilisateurs');
-        $stats['total_credits'] = (int)$q->fetchColumn();
-    } catch (Throwable $e) {
-    }
-
-    // Rides today (best-effort; try typical tables/columns)
-    try {
-        // try on trajets with date_depart
-        $stmt = $db->prepare('SELECT COUNT(*) FROM trajets WHERE DATE(date_depart) = CURDATE()');
-        $stmt->execute();
-        $stats['rides_today'] = (int)$stmt->fetchColumn();
-    } catch (Throwable $e1) {
-        try {
-            // fallback: covoiturages table
-            $stmt = $db->prepare('SELECT COUNT(*) FROM covoiturages WHERE DATE(date_depart) = CURDATE()');
-            $stmt->execute();
-            $stats['rides_today'] = (int)$stmt->fetchColumn();
-        } catch (Throwable $e2) { /* ignore */
-        }
-    }
-
-    return $stats;
+    
 }
 
 function admin_list_users(PDO $db): array
@@ -262,3 +293,5 @@ function admin_delete_user(PDO $db, array $post): void
     header('Location: ' . url('admin') . '#tab-users');
     exit;
 }
+
+

@@ -1,6 +1,15 @@
 <?php include_once __DIR__ . '/../includes/header.php'; ?>
 
 <?php
+// garde-fous (au cas où)
+$tab     = $tab     ?? 'dashboard';
+$total   = $total   ?? 0;
+$pending = $pending ?? [];
+$pages   = $pages   ?? 0;
+$page    = $page    ?? 1;
+?>
+
+<?php
 // Expects: $dashboard, $users, $stats
 $admin = $_SESSION['user'] ?? [];
 ?>
@@ -13,7 +22,7 @@ $admin = $_SESSION['user'] ?? [];
 
         <!-- Carte gauche : identité admin -->
         <div class="card profile__card">
-          <div class="card-body admin-identity"> 
+          <div class="card-body admin-identity">
             <div class="identity-text">
               <h2 class="h5 mb-1">Administrateur</h2>
               <p class="mb-0 small"><?= e($admin['prenom'] ?? '') ?> <?= e($admin['nom'] ?? '') ?> (<?= e($admin['pseudo'] ?? '') ?>)</p>
@@ -54,7 +63,13 @@ $admin = $_SESSION['user'] ?? [];
               <button class="nav-link" id="tab-stats-tab" data-bs-toggle="tab" data-bs-target="#tab-stats" type="button" role="tab" aria-controls="tab-stats" aria-selected="false">Statistiques</button>
             </li>
             <li class="nav-item" role="presentation">
-              <button class="nav-link" id="tab-settings-tab" data-bs-toggle="tab" data-bs-target="#tab-settings" type="button" role="tab" aria-controls="tab-settings" aria-selected="false">Avis en attente</button>
+              <button class="nav-link" id="avis-en-attente-tab" data-bs-toggle="tab" data-bs-target="#tab-settings" type="button" role="tab" aria-controls="tab-settings" aria-selected="false">Avis en attente (<?= (int)$total ?>)</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-settings-tab" data-bs-toggle="tab" data-bs-target="#tab-settings" type="button" role="tab" aria-controls="tab-settings" aria-selected="false">Creer compte</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-settings-tab" data-bs-toggle="tab" data-bs-target="#tab-settings" type="button" role="tab" aria-controls="tab-settings" aria-selected="false">trajets</button>
             </li>
           </ul>
 
@@ -193,10 +208,97 @@ $admin = $_SESSION['user'] ?? [];
               </div>
             </div>
 
-            <!-- Settings -->
-            <div class="tab-pane fade" id="tab-settings" role="tabpanel" aria-labelledby="tab-settings-tab">
-              <p class="info-tab-admin">Paramètres d'administration à venir…</p>
+            <!-- Avis coté admin -->
+
+
+
+            <div class="tab-pane fade" id="avis-en-attente" role="tabpanel" aria-labelledby="avis-en-attente-tab">
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="mb-0">Avis en attente</h5>
+
+                <form class="d-flex gap-2" method="get">
+                  <input type="hidden" name="tab" value="pending">
+                  <input class="form-control form-control-sm" type="number" min="1" max="5" name="min"
+                    value="<?= htmlspecialchars((string)($_GET['min'] ?? '')) ?>" placeholder="Note min.">
+                  <input class="form-control form-control-sm" type="number" name="driver"
+                    value="<?= htmlspecialchars((string)($_GET['driver'] ?? '')) ?>" placeholder="Driver ID">
+                  <button class="btn btn-sm btn-outline-secondary">Filtrer</button>
+                </form>
+              </div>
+
+              <?php if (!$pending): ?>
+                <div class="alert alert-success">Aucun avis en attente 🎉</div>
+              <?php else: ?>
+                <div class="table-responsive">
+                  <table class="table align-middle">
+                    <thead>
+                      <tr>
+                        <th style="width:80px">Note</th>
+                        <th>Commentaire</th>
+                        <th style="width:140px">Driver</th>
+                        <th style="width:140px">Auteur</th>
+                        <th style="width:160px">Créé</th>
+                        <th style="width:220px" class="text-end">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="pending-tbody">
+                      <?php foreach ($pending as $doc): ?>
+                        <?php
+                        $id = (string)$doc['_id'];
+                        $rating = (int)($doc['rating'] ?? 0);
+                        $comment = trim((string)($doc['comment'] ?? ''));
+                        $driverId = (int)($doc['driver_id'] ?? 0);
+                        $riderId  = (int)($doc['rider_id'] ?? 0);
+                        $created  = $doc['created_at'] ?? null;
+                        if ($created instanceof MongoDB\BSON\UTCDateTime) {
+                          $created = $created->toDateTime()->format('Y-m-d H:i');
+                        }
+                        ?>
+                        <tr id="row-<?= $id ?>">
+                          <td>
+                            <span class="badge bg-primary-subtle text-primary fw-semibold"><?= $rating ?>/5</span>
+                          </td>
+                          <td>
+                            <?= htmlspecialchars($comment ?: '—') ?>
+                          </td>
+                          <td>#<?= $driverId ?></td>
+                          <td>#<?= $riderId ?></td>
+                          <td><?= htmlspecialchars($created ?: '—') ?></td>
+                          <td class="text-end">
+                            <button
+                              class="btn btn-sm btn-outline-success me-2 act-approve"
+                              data-id="<?= $id ?>">Approuver</button>
+                            <button
+                              class="btn btn-sm btn-outline-danger act-reject"
+                              data-id="<?= $id ?>">Rejeter</button>
+                          </td>
+                        </tr>
+                      <?php endforeach; ?>
+                    </tbody>
+                  </table>
+                </div>
+
+                <?php if ($pages > 1): ?>
+                  <nav>
+                    <ul class="pagination pagination-sm">
+                      <?php for ($p = 1; $p <= $pages; $p++): ?>
+                        <?php
+                        $active = $p === $page ? ' active' : '';
+                        $q = $_GET;
+                        $q['page'] = $p;
+                        $q['tab'] = 'pending';
+                        $href = '?' . http_build_query($q);
+                        ?>
+                        <li class="page-item<?= $active ?>">
+                          <a class="page-link" href="<?= htmlspecialchars($href) ?>"><?= $p ?></a>
+                        </li>
+                      <?php endfor; ?>
+                    </ul>
+                  </nav>
+                <?php endif; ?>
+              <?php endif; ?>
             </div>
+
           </div>
         </div>
       </div>

@@ -15,7 +15,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "bootstrap": "^5.3.7"
+    "bootstrap": "^5.3.7",
+    "mongodb": "^6.20.0"
   },
   "devDependencies": {
     "sass": "^1.90.0"
