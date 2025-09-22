@@ -774,46 +774,57 @@ if (!function_exists('trajet_participer')) {
             if (function_exists('require_post')) require_post();
             $db->beginTransaction();
 
-            // Lock voyage
+            // Lock voyage et disponibilites
             $st = $db->prepare("SELECT id, chauffeur_id, prix, statut, places_disponibles
                             FROM voyages WHERE id=:id FOR UPDATE");
             $st->execute([':id' => $voyageId]);
-            $v = $st->fetch(PDO::FETCH_ASSOC);
-            if (!$v) throw new RuntimeException('Trajet introuvable.');
-            if (($v['statut'] ?? '') === 'annule') throw new RuntimeException('Trajet annulé.');
+            $voyage = $st->fetch(PDO::FETCH_ASSOC);
+            if (!$voyage) throw new RuntimeException('Trajet introuvable.');
+            if (($voyage['statut'] ?? '') === 'annule') throw new RuntimeException('Trajet annule.');
 
-            // Déjà inscrit actif ?
             $chk = $db->prepare("SELECT 1 FROM participations
                              WHERE voyage_id=:vid AND passager_id=:uid
                                AND statut IN ('en_attente','confirme')
                              LIMIT 1 FOR UPDATE");
             $chk->execute([':vid' => $voyageId, ':uid' => $uid]);
-            if ($chk->fetchColumn()) throw new RuntimeException('Vous participez déjà à ce trajet.');
+            if ($chk->fetchColumn()) throw new RuntimeException('Vous participez deja a ce trajet.');
 
-            // 1 seule place
-            $places = 1;
-            if (isset($v['places_disponibles']) && (int)$v['places_disponibles'] < $places) {
-                throw new RuntimeException('Plus de place disponible.');
+            // multi-places : on borne la quantite reservee
+            $requestedPlaces = isset($_POST['places']) ? (int)$_POST['places'] : 1;
+            if ($requestedPlaces < 1) $requestedPlaces = 1;
+
+            $available = null;
+            if (isset($voyage['places_disponibles'])) {
+                $available = (int)$voyage['places_disponibles'];
+                if ($available <= 0) {
+                    throw new RuntimeException('Plus de place disponible.');
+                }
+                if ($requestedPlaces > $available) {
+                    $requestedPlaces = $available;
+                }
             }
+            if ($requestedPlaces < 1) throw new RuntimeException('Plus de place disponible.');
 
-            $prix      = (int)$v['prix'];
-            $totalCost = $prix; // 1 place
+            $unitPrice = (int)($voyage['prix'] ?? 0);
+            if ($unitPrice < 0) $unitPrice = 0;
+            $totalCost = $unitPrice * $requestedPlaces;
+            if ($totalCost <= 0) throw new RuntimeException('Montant invalide.');
 
-            // Lock crédits user
+            // Lock credits user
             $u = $db->prepare("SELECT credits FROM utilisateurs WHERE id=:u FOR UPDATE");
             $u->execute([':u' => $uid]);
             $credits = (int)$u->fetchColumn();
-            if ($credits < $totalCost) throw new RuntimeException('Crédits insuffisants.');
+            if ($credits < $totalCost) throw new RuntimeException('Credits insuffisants.');
 
-            // Débit passager
+            // Debit passager
             $db->prepare("UPDATE utilisateurs SET credits = credits - :a WHERE id=:u")
                 ->execute([':a' => $totalCost, ':u' => $uid]);
 
-            // Crédit ESCROW (wallet site)
+            // Credit ESCROW (wallet site)
             $db->prepare("UPDATE site_wallet SET balance = balance + :a WHERE id=1")
                 ->execute([':a' => $totalCost]);
 
-            // Journaux
+            // Journaux de paiement
             $db->prepare("INSERT INTO transactions(user_id, voyage_id, amount, direction, reason)
                       VALUES(:u,:vid,:a,'debit','participation_pay')")
                 ->execute([':u' => $uid, ':vid' => $voyageId, ':a' => $totalCost]);
@@ -821,19 +832,24 @@ if (!function_exists('trajet_participer')) {
                       VALUES(NULL,:vid,:a,'credit','participation_pay')")
                 ->execute([':vid' => $voyageId, ':a' => $totalCost]);
 
-            // Créer participation
-            $db->prepare("INSERT INTO participations(voyage_id, passager_id, places, statut)
-                      VALUES(:vid, :uid, 1, 'confirme')")
-                ->execute([':vid' => $voyageId, ':uid' => $uid]);
+            // Enregistrer la participation avec le prix unitaire
+            $db->prepare("INSERT INTO participations(voyage_id, passager_id, places, prix, statut)
+                      VALUES(:vid, :uid, :places, :prix, 'confirme')")
+                ->execute([':vid' => $voyageId, ':uid' => $uid, ':places' => $requestedPlaces, ':prix' => $unitPrice]);
 
-            // Décrément éventuel du stock
-            if (isset($v['places_disponibles'])) {
-                $db->prepare("UPDATE voyages SET places_disponibles = places_disponibles - 1 WHERE id=:vid")
+            if ($available !== null) {
+                $db->prepare("UPDATE voyages
+                            SET places_disponibles = GREATEST(0, places_disponibles - :p),
+                                payout_status='pending'
+                            WHERE id=:vid")
+                    ->execute([':p' => $requestedPlaces, ':vid' => $voyageId]);
+            } else {
+                $db->prepare("UPDATE voyages SET payout_status='pending' WHERE id=:vid")
                     ->execute([':vid' => $voyageId]);
             }
 
             $db->commit();
-            if (function_exists('flash')) flash('success', 'Participation payée et confirmée.');
+            if (function_exists('flash')) flash('success', 'Participation payee et confirmee.');
         } catch (Throwable $e) {
             if ($db->inTransaction()) $db->rollBack();
             if (function_exists('flash')) flash('danger', $e->getMessage());
@@ -843,6 +859,7 @@ if (!function_exists('trajet_participer')) {
 
 
 
+// Chauffeur : valider 
 // Chauffeur : valider 
 if (!function_exists('profile_voyage_accept')) {
     function profile_voyage_accept(PDO $db, int $voyageId, int $uid): void
