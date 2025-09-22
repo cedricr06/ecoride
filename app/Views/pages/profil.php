@@ -1,4 +1,11 @@
-<?php include_once __DIR__ . '/../includes/header.php'; ?>
+<?php
+$role = $_SESSION['user']['role'] ?? ($authUser['role'] ?? '');
+if ($role === 'administrateur') {
+  header('Location: ' . BASE_URL . '/admin');
+  exit;
+}
+include_once __DIR__ . '/../includes/header.php';
+?>
 
 <div class="container profile mt-4">
   <div class="row g-4">

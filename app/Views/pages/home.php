@@ -19,21 +19,21 @@
 
       <!-- Formulaire (à droite en ≥992px / en dessous en mobile) -->
       <div class="col-12 col-md-5 col-lg-5 d-flex">
-        <form class="overlay-card p-4 formulaire-hero ms-lg-auto h-100 w-100 d-flex flex-column justify-content-center" action="" method="get" style="max-width:520px;">
+        <form class="overlay-card p-4 formulaire-hero ms-lg-auto h-100 w-100 d-flex flex-column justify-content-center" action="<?= url('trajets') ?>" method="get" style="max-width:520px;">
           <div class="mb-3">
             <label class="form-label" for="depart">Ville de départ :</label>
-            <input id="depart" type="text" class="form-control" placeholder="Ex: Toulouse" required>
+            <input id="depart" name="depart" type="text" class="form-control" placeholder="Ex: Toulouse" required>
           </div>
 
           <div class="mb-3">
             <label class="form-label" for="destination">Destination :</label>
-            <input id="destination" type="text" class="form-control" placeholder="Ex: Bordeaux" required>
+            <input id="destination" name="arrivee" type="text" class="form-control" placeholder="Ex: Bordeaux" required>
           </div>
 
           <div>
             <label class="form-label" for="date">Date :</label>
             <div class="input-group flex-nowrap">
-              <input id="date" type="date" class="form-control" required>
+              <input id="date" name="date" type="date" class="form-control" required>
               <button class="btn btn-success btn-rechercher" type="submit">Rechercher</button>
             </div>
           </div>

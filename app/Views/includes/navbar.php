@@ -31,11 +31,14 @@
               </svg>
             </button>
             <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-              <li><a class="dropdown-item" href="<?= url('proposer-trajet') ?>">Proposer un trajet</a></li>
+              <?php if (($user['role'] ?? '') !== 'administrateur'): ?>
+                <li><a class="dropdown-item" href="<?= url('proposer-trajet') ?>">Proposer un trajet</a></li>
+              <?php endif; ?>
               <?php if (($user['role'] ?? '') === 'administrateur'): ?>
                 <li><a class="dropdown-item" href="<?= url('admin') ?>">Administration</a></li>
+              <?php else: ?>
+                <li><a class="dropdown-item" href="<?= url('profil') ?>">Profil</a></li>
               <?php endif; ?>
-              <li><a class="dropdown-item" href="<?= url('profil') ?>">Profil</a></li>
               <li>
                 <hr class="dropdown-divider">
               </li>
@@ -81,7 +84,7 @@
         <div class="offcanvas-body">
           <ul class="navbar-nav align-items-lg-center gap-lg-3">
             <li class="nav-item"><a class="nav-link" href="<?= url('/') ?>">Accueil</a></li>
-            <li class="nav-item"><a class="nav-link" href="<?= url('trajets') ?>">Trajets</a></li>
+            <li class="nav-item"><a class="nav-link" href="<?= url('trajets') ?>">Covoiturages</a></li>
             <li class="nav-item"><a class="nav-link" href="<?= url('contact') ?>">Contact</a></li>
           </ul>
         </div>

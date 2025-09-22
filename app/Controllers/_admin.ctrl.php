@@ -216,65 +216,110 @@ function admin_reactivate_user(PDO $db, array $post): void
     exit;
 }
 
-function admin_stats(PDO $db): array
+
+
+function admin_stats(PDO $db, int $days = 7): array
 {
-    $result = [
-        'rides' => ['labels' => [], 'values' => []],
-        'revenue' => ['labels' => [], 'values' => []],
-        'total_revenue' => 0,
-    ];
+    $days = max(1, min(31, $days));
+    $tz = new \DateTimeZone('Europe/Paris');
+    $today = new \DateTimeImmutable('now', $tz);
+    $lastDay = $today->setTime(0, 0, 0);
+    $firstDay = $lastDay->modify('-' . ($days - 1) . ' days');
 
-    // Rides per day (last 14 days)
-    try {
-        $sql = "SELECT DATE(date_depart) AS jour, COUNT(*) AS c FROM trajets WHERE date_depart >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) GROUP BY DATE(date_depart) ORDER BY jour";
-        $st = $db->query($sql);
-        $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        foreach ($rows as $r) {
-            $result['rides']['labels'][] = (string)$r['jour'];
-            $result['rides']['values'][] = (int)$r['c'];
-        }
-    } catch (Throwable $e1) {
-        try {
-            $sql = "SELECT DATE(date_depart) AS jour, COUNT(*) AS c FROM covoiturages WHERE date_depart >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) GROUP BY DATE(date_depart) ORDER BY jour";
-            $st = $db->query($sql);
-            $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
-            foreach ($rows as $r) {
-                $result['rides']['labels'][] = (string)$r['jour'];
-                $result['rides']['values'][] = (int)$r['c'];
-            }
-        } catch (Throwable $e2) { /* leave empty */
-        }
+    $labels = [];
+    $cursor = $firstDay;
+    for ($i = 0; $i < $days; $i++) {
+        $labels[] = $cursor->format('Y-m-d');
+        $cursor = $cursor->modify('+1 day');
     }
 
-    // Revenue per day (best-effort)
-    // Try a typical payments table with commission column
+    $labelIndex = array_flip($labels);
+    $ridesValues = array_fill(0, $days, 0);
+    $revenueValues = array_fill(0, $days, 0.0);
+
+    $startAt = $firstDay->setTime(0, 0, 0)->format('Y-m-d H:i:s');
+    $endAt = $lastDay->setTime(23, 59, 59)->format('Y-m-d H:i:s');
+
+    $ridesRows = [];
     try {
-        $sql = "SELECT DATE(created_at) AS jour, SUM(commission) AS rev FROM paiements WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) GROUP BY DATE(created_at) ORDER BY jour";
-        $st = $db->query($sql);
-        $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        foreach ($rows as $r) {
-            $result['revenue']['labels'][] = (string)$r['jour'];
-            $result['revenue']['values'][] = (float)$r['rev'];
-            $result['total_revenue'] += (float)$r['rev'];
-        }
-    } catch (Throwable $e1) {
-        // Fallback: compute 10% of price from trajets if column prix exists
+        $stmt = $db->prepare("SELECT DATE(date_depart) AS jour, COUNT(*) AS c FROM voyages WHERE date_depart BETWEEN :start AND :end GROUP BY jour ORDER BY jour");
+        $stmt->execute(['start' => $startAt, 'end' => $endAt]);
+        $ridesRows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e0) {
+        $ridesRows = [];
+    }
+    if (!$ridesRows) {
         try {
-            $sql = "SELECT DATE(date_depart) AS jour, SUM(prix * 0.1) AS rev FROM trajets WHERE date_depart >= DATE_SUB(CURDATE(), INTERVAL 14 DAY) GROUP BY DATE(date_depart) ORDER BY jour";
-            $st = $db->query($sql);
-            $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
-            foreach ($rows as $r) {
-                $result['revenue']['labels'][] = (string)$r['jour'];
-                $result['revenue']['values'][] = (float)$r['rev'];
-                $result['total_revenue'] += (float)$r['rev'];
-            }
+            $stmt = $db->prepare("SELECT DATE(date_depart) AS jour, COUNT(*) AS c FROM trajets WHERE date_depart BETWEEN :start AND :end GROUP BY jour ORDER BY jour");
+            $stmt->execute(['start' => $startAt, 'end' => $endAt]);
+            $ridesRows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e1) {
+            $ridesRows = [];
+        }
+    }
+    if (!$ridesRows) {
+        try {
+            $stmt = $db->prepare("SELECT DATE(date_depart) AS jour, COUNT(*) AS c FROM covoiturages WHERE date_depart BETWEEN :start AND :end GROUP BY jour ORDER BY jour");
+            $stmt->execute(['start' => $startAt, 'end' => $endAt]);
+            $ridesRows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (Throwable $e2) {
-            // Leave empty if schema not present
+            $ridesRows = [];
         }
     }
+    foreach ($ridesRows as $row) {
+        $day = isset($row['jour']) ? (string)$row['jour'] : '';
+        if ($day === '' || !isset($labelIndex[$day])) {
+            continue;
+        }
+        $count = isset($row['c']) ? (int)$row['c'] : 0;
+        $ridesValues[$labelIndex[$day]] = $count;
+    }
 
-    return $result;
+    $revenueRows = [];
+    try {
+        $stmt = $db->prepare("SELECT DATE(created_at) AS jour, SUM(commission) AS rev FROM paiements WHERE created_at BETWEEN :start AND :end GROUP BY jour ORDER BY jour");
+        $stmt->execute(['start' => $startAt, 'end' => $endAt]);
+        $revenueRows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e1) {
+        $revenueRows = [];
+    }
+    if (!$revenueRows) {
+        try {
+            $stmt = $db->prepare("SELECT DATE(created_at) AS jour, SUM(amount) AS rev FROM transactions WHERE created_at BETWEEN :start AND :end AND direction = 'credit' AND reason = 'site_commission' GROUP BY jour ORDER BY jour");
+            $stmt->execute(['start' => $startAt, 'end' => $endAt]);
+            $revenueRows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $eTx) {
+            $revenueRows = [];
+        }
+    }
+    if (!$revenueRows) {
+        try {
+            $stmt = $db->prepare("SELECT DATE(date_depart) AS jour, SUM(prix * 0.1) AS rev FROM trajets WHERE date_depart BETWEEN :start AND :end GROUP BY jour ORDER BY jour");
+            $stmt->execute(['start' => $startAt, 'end' => $endAt]);
+            $revenueRows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e2) {
+            $revenueRows = [];
+        }
+    }
+    foreach ($revenueRows as $row) {
+        $day = isset($row['jour']) ? (string)$row['jour'] : '';
+        if ($day === '' || !isset($labelIndex[$day])) {
+            continue;
+        }
+        $amount = isset($row['rev']) ? (float)$row['rev'] : 0.0;
+        $revenueValues[$labelIndex[$day]] = round($amount, 2);
+    }
+
+    $totalRevenue = round(array_sum($revenueValues), 2);
+
+    return [
+        'rides' => ['labels' => $labels, 'values' => $ridesValues],
+        'revenue' => ['labels' => $labels, 'values' => $revenueValues],
+        'total_revenue' => $totalRevenue,
+    ];
 }
+
+
 
 function admin_delete_user(PDO $db, array $post): void
 {
@@ -359,5 +404,3 @@ function admin_delete_user(PDO $db, array $post): void
     header('Location: ' . url('admin') . '#tab-users');
     exit;
 }
-
-

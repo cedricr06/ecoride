@@ -64,6 +64,7 @@ $router->add('deconnexion',     BASE_PATH . '/app/Views/pages/deconnexion.php');
 
 // GET /profil  → prépare $ctx et affiche la vue
 if ($method === 'GET' && $path === '/profil') {
+    forbid_admin();
     require BASE_PATH . '/app/Controllers/_profil.ctrl.php'; // prépare $ctx
     $ctx = profile_prepare($db, $_SESSION['user'] ?? []);
     extract($ctx);
@@ -73,6 +74,7 @@ if ($method === 'GET' && $path === '/profil') {
 
 // POST /profil (sauvegarde infos de compte)
 if ($method === 'POST' && $path === '/profil') {
+    forbid_admin();
     require BASE_PATH . '/app/Controllers/_profil.ctrl.php';
     if (function_exists('verify_csrf')) verify_csrf();
     // Ton contrôleur gère quelle action précise selon les champs envoyés
@@ -82,6 +84,7 @@ if ($method === 'POST' && $path === '/profil') {
 
 // POST /profil/participations/{id}/annuler
 if ($method === 'POST' && preg_match('#^/profil/participations/(\d+)/(?:annuler|supprimer)$#', $path, $m)) {
+    forbid_admin();
     require BASE_PATH . '/app/Controllers/_profil.ctrl.php';
     if (function_exists('verify_csrf')) verify_csrf();
     profile_participation_delete($db, (int)$m[1], $_SESSION['user']['id'] ?? 0);
@@ -90,6 +93,7 @@ if ($method === 'POST' && preg_match('#^/profil/participations/(\d+)/(?:annuler|
 }
 // POST /trajet/{id}/participer  (passager)
 if ($method === 'POST' && preg_match('#^/trajet/(\d+)/participer$#', $path, $m)) {
+    forbid_admin();
     require BASE_PATH . '/app/Controllers/_profil.ctrl.php';
     if (function_exists('verify_csrf')) verify_csrf();
     trajet_participer($db, (int)$m[1], $_SESSION['user']['id'] ?? 0);
@@ -100,6 +104,7 @@ if ($method === 'POST' && preg_match('#^/trajet/(\d+)/participer$#', $path, $m))
 
 // POST /profil/voyages/{id}/annuler
 if ($method === 'POST' && preg_match('#^/profil/voyages/(\d+)/annuler$#', $path, $m)) {
+    forbid_admin();
     require BASE_PATH . '/app/Controllers/_profil.ctrl.php';
     if (function_exists('verify_csrf')) verify_csrf();
     profile_participation_delete($db, (int)$m[1], $_SESSION['user']['id'] ?? 0);
@@ -109,6 +114,7 @@ if ($method === 'POST' && preg_match('#^/profil/voyages/(\d+)/annuler$#', $path,
 
 // POST /profil/voyages/{id}/valider
 if ($method === 'POST' && preg_match('#^/profil/voyages/(\d+)/valider$#', $path, $m)) {
+    forbid_admin();
     require BASE_PATH . '/app/Controllers/_profil.ctrl.php';
     if (function_exists('verify_csrf')) verify_csrf();
     profile_voyage_accept($db, (int)$m[1], $_SESSION['user']['id'] ?? 0);
@@ -118,6 +124,7 @@ if ($method === 'POST' && preg_match('#^/profil/voyages/(\d+)/valider$#', $path,
 
 // POST /profil/enregistrer
 if ($method === 'POST' && $path === '/profil/enregistrer') {
+    forbid_admin();
     require BASE_PATH . '/app/Controllers/_profil.ctrl.php';
     if (function_exists('verify_csrf')) verify_csrf();
     profile_save($db, $authUser, $_POST);
@@ -126,6 +133,7 @@ if ($method === 'POST' && $path === '/profil/enregistrer') {
 
 // POST /profil/update (mise à jour compte)
 if ($method === 'POST' && $path === '/profil/update') {
+    forbid_admin();
     require BASE_PATH . '/app/Controllers/_profil.ctrl.php';
     if (function_exists('verify_csrf')) verify_csrf();
     profile_update_account($db, $authUser, $_POST);
@@ -134,6 +142,7 @@ if ($method === 'POST' && $path === '/profil/update') {
 
 // POST /profil/password (changement de mot de passe)
 if ($method === 'POST' && $path === '/profil/password') {
+    forbid_admin();
     require BASE_PATH . '/app/Controllers/_profil.ctrl.php';
     if (function_exists('verify_csrf')) verify_csrf();
     profile_update_password($db, $authUser, $_POST);
@@ -142,6 +151,7 @@ if ($method === 'POST' && $path === '/profil/password') {
 
 // POST /profil/role
 if ($method === 'POST' && $path === '/profil/role') {
+    forbid_admin();
     require BASE_PATH . '/app/Controllers/_profil.ctrl.php';
     if (function_exists('verify_csrf')) verify_csrf();
     profile_role_update($db, $authUser, $_POST);
@@ -150,6 +160,7 @@ if ($method === 'POST' && $path === '/profil/role') {
 
 // POST /profil/preferences/save
 if ($method === 'POST' && $path === '/profil/preferences/save') {
+    forbid_admin();
     require BASE_PATH . '/app/Controllers/_profil.ctrl.php';
     if (function_exists('verify_csrf')) verify_csrf();
     preferences_save($db, $authUser, $_POST);
@@ -159,6 +170,7 @@ if ($method === 'POST' && $path === '/profil/preferences/save') {
 // Véhicules
 // POST /profil/vehicules/ajouter
 if ($method === 'POST' && $path === '/profil/vehicules/ajouter') {
+    forbid_admin();
     require BASE_PATH . '/app/Controllers/_profil.ctrl.php';
     if (function_exists('verify_csrf')) verify_csrf();
     vehicle_add($db, $authUser, $_POST);
@@ -167,6 +179,7 @@ if ($method === 'POST' && $path === '/profil/vehicules/ajouter') {
 
 // POST /profil/vehicules/{id}/edit
 if ($method === 'POST' && preg_match('#^/profil/vehicules/(\d+)/edit$#', $path, $m)) {
+    forbid_admin();
     require BASE_PATH . '/app/Controllers/_profil.ctrl.php';
     if (function_exists('verify_csrf')) verify_csrf();
     vehicle_update($db, $authUser, (int)$m[1], $_POST);
@@ -175,6 +188,7 @@ if ($method === 'POST' && preg_match('#^/profil/vehicules/(\d+)/edit$#', $path, 
 
 // POST /profil/vehicules/{id}/delete
 if ($method === 'POST' && preg_match('#^/profil/vehicules/(\d+)/delete$#', $path, $m)) {
+    forbid_admin();
     require BASE_PATH . '/app/Controllers/_profil.ctrl.php';
     if (function_exists('verify_csrf')) verify_csrf();
     vehicle_delete($db, $authUser, (int)$m[1]);
@@ -199,8 +213,9 @@ if ($method === 'GET' && $path === '/admin') {
 
     $dashboard = admin_dashboard($db);
     $users     = admin_list_users($db);
+    $statsDays = 7;
     // Stats de base (peuvent aussi être chargées via AJAX)
-    $stats     = admin_stats($db);
+    $stats     = admin_stats($db, $statsDays);
 
     try {
         [$pending, $total, $pages, $page] = admin_pending_reviews($_GET);
@@ -211,6 +226,25 @@ if ($method === 'GET' && $path === '/admin') {
         $page = 1;
     }
     $csrf = admin_csrf_token();
+
+    $tab = isset($_GET['tab']) ? (string)$_GET['tab'] : 'dashboard';
+    $allowedTabs = ['dashboard', 'users', 'stats', 'pending', 'create'];
+    if (!in_array($tab, $allowedTabs, true)) {
+        $tab = 'dashboard';
+    }
+
+    $createAdminFeedback = $_SESSION['create_admin_feedback'] ?? null;
+    $createAdminErrors = $createAdminFeedback['errors'] ?? [];
+    if (!is_array($createAdminErrors)) {
+        $createAdminErrors = [];
+    }
+    $createAdminOld = $createAdminFeedback['old'] ?? [];
+    if (!is_array($createAdminOld)) {
+        $createAdminOld = [];
+    }
+    $createAdminSuccess = $createAdminFeedback['success'] ?? '';
+    unset($_SESSION['create_admin_feedback']);
+    $createAdminOld = array_merge(['email' => '', 'pseudo' => ''], $createAdminOld);
 
     require BASE_PATH . '/app/Views/pages/admin.php';
     exit;
@@ -240,8 +274,10 @@ if ($method === 'POST' && $path === '/admin/utilisateurs/reactiver') {
 if ($method === 'GET' && $path === '/admin/stats') {
     require_once BASE_PATH . '/app/Controllers/_admin.ctrl.php';
     require_admin();
+    $days = isset($_GET['days']) ? (int)$_GET['days'] : 7;
+    $days = max(1, min(31, $days));
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(admin_stats($db));
+    echo json_encode(admin_stats($db, $days));
     exit;
 }
 

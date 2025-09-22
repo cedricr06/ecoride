@@ -135,6 +135,16 @@ if (!function_exists('require_admin')) {
         }
     }
 }
+if (!function_exists('forbid_admin')) {
+    function forbid_admin(?string $redirect = null): void {
+        $role = $_SESSION['user']['role'] ?? '';
+        if ($role === 'administrateur') {
+            $target = $redirect ?? (BASE_URL . '/admin');
+            header('Location: ' . $target);
+            exit;
+        }
+    }
+}
 if (!function_exists('guest_only')) {
     function guest_only() {
         if (!empty($_SESSION['user'])) {

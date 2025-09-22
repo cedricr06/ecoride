@@ -7,6 +7,10 @@ $total   = $total   ?? 0;
 $pending = $pending ?? [];
 $pages   = $pages   ?? 0;
 $page    = $page    ?? 1;
+$createAdminErrors  = is_array($createAdminErrors ?? null) ? $createAdminErrors : [];
+$createAdminOld     = is_array($createAdminOld ?? null) ? $createAdminOld : [];
+$createAdminSuccess = $createAdminSuccess ?? '';
+$createAdminOld     = array_merge(['email' => '', 'pseudo' => ''], $createAdminOld);
 ?>
 
 <?php
@@ -25,7 +29,7 @@ $admin = $_SESSION['user'] ?? [];
           <div class="card-body admin-identity">
             <div class="identity-text">
               <h2 class="h5 mb-1">Administrateur</h2>
-              <p class="mb-0 small"><?= e($admin['prenom'] ?? '') ?> <?= e($admin['nom'] ?? '') ?> (<?= e($admin['pseudo'] ?? '') ?>)</p>
+              <p class="mb-0 small"><?= e($admin['prenom'] ?? '') ?> <?= e($admin['nom'] ?? '') ?> <?= e($admin['pseudo'] ?? '') ?></p>
               <p class="mb-0 small"><?= e($admin['email'] ?? '') ?></p>
               <span class="badge bg-success mt-2">Rôle: Administrateur</span>
             </div>
@@ -55,21 +59,18 @@ $admin = $_SESSION['user'] ?? [];
           <ul class="nav nav-tabs" id="adminTabs" role="tablist">
             <li class="nav-item" role="presentation">
               <button class="nav-link active" id="tab-dashboard-tab" data-bs-toggle="tab" data-bs-target="#tab-dashboard" type="button" role="tab" aria-controls="tab-dashboard" aria-selected="true">Tableau de bord</button>
+            </li>          
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-stats-tab" data-bs-toggle="tab" data-bs-target="#tab-stats" type="button" role="tab" aria-controls="tab-stats" aria-selected="false">Statistiques</button>
             </li>
             <li class="nav-item" role="presentation">
               <button class="nav-link" id="tab-users-tab" data-bs-toggle="tab" data-bs-target="#tab-users" type="button" role="tab" aria-controls="tab-users" aria-selected="false">Utilisateurs</button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="tab-stats-tab" data-bs-toggle="tab" data-bs-target="#tab-stats" type="button" role="tab" aria-controls="tab-stats" aria-selected="false">Statistiques</button>
             </li>
             <li class="nav-item" role="presentation">
               <a class="nav-link" id="avis-en-attente-tab" data-bs-toggle="tab" href="#avis-en-attente" role="tab" aria-controls="avis-en-attente" aria-selected="false" data-count="<?= (int)$total ?>">Avis en attente (<?= (int)$total ?>)</a>
             </li>
             <li class="nav-item" role="presentation">
               <button class="nav-link" id="tab-settings-tab" data-bs-toggle="tab" data-bs-target="#tab-settings" type="button" role="tab" aria-controls="tab-settings" aria-selected="false">Creer compte</button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="tab-settings-tab" data-bs-toggle="tab" data-bs-target="#tab-settings" type="button" role="tab" aria-controls="tab-settings" aria-selected="false">trajets</button>
             </li>
           </ul>
 
@@ -185,23 +186,23 @@ $admin = $_SESSION['user'] ?? [];
 
             <!-- Stats -->
             <div class="tab-pane fade" id="tab-stats" role="tabpanel" aria-labelledby="tab-stats-tab">
-              <div class="row g-3">
-                <div class="col-12">
-                  <div class="card">
+              <div id="admin-stats-ctx" data-endpoint="<?= url('admin/stats') ?>" data-days="<?= (int)($statsDays ?? 7) ?>"></div>
+              <div class="row g-3 ">
+                <div class="col-12 ">
+                  <div class="card ">
                     <div class="card-body">
                       <h3 class="h6">Covoiturages par jour</h3>
-                      <canvas id="ridesChart" height="160"></canvas>
+                      <canvas class="chart-warp" id="ridesChart" height="160"  ></canvas>
                     </div>
                   </div>
                 </div>
                 <div class="col-12">
                   <div class="card">
-                    <div class="card-body">
+                    <div class="card-body ">
                       <h3 class="h6 d-flex justify-content-between align-items-center">
                         <span>Crédits gagnés par jour</span>
-                        <span class="badge bg-success">Total: <span id="totalRevenueText">0</span></span>
                       </h3>
-                      <canvas id="revenueChart" height="160"></canvas>
+                      <canvas class="chart-warp" id="revenueChart" height="160"></canvas>
                     </div>
                   </div>
                 </div>
@@ -211,12 +212,6 @@ $admin = $_SESSION['user'] ?? [];
             <!-- Avis coté admin -->
 
 
-            <div id="admin-mod-ctx"
-              data-endpoint="<?= htmlspecialchars(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ?>"
-              data-count="<?= (int)($total ?? 0) ?>"
-              data-csrf="<?= htmlspecialchars($csrf ?? '', ENT_QUOTES) ?>"
-              data-mid="<?= (int)($_SESSION['user']['id'] ?? 0) ?>">
-            </div>
             <div class="tab-pane fade" id="avis-en-attente" role="tabpanel" aria-labelledby="avis-en-attente-tab">
               <div class="d-flex align-items-center justify-content-between mb-3">
                 <h5 class="mb-0">Avis en attente</h5>
@@ -302,6 +297,61 @@ $admin = $_SESSION['user'] ?? [];
               <?php endif; ?>
             </div>
 
+            <div class="tab-pane fade" id="tab-settings" role="tabpanel" aria-labelledby="tab-settings-tab">
+              <div class="row">
+                <div class="col-12 col-lg-12 col-xl-12">
+                  <?php if ($createAdminSuccess): ?>
+                    <div class="alert alert-success"><?= e($createAdminSuccess) ?></div>
+                  <?php endif; ?>
+                  <?php if (!empty($createAdminErrors['global'])): ?>
+                    <div class="alert alert-danger"><?= e($createAdminErrors['global']) ?></div>
+                  <?php endif; ?>
+                  <?php if (!empty($createAdminErrors['csrf'])): ?>
+                    <div class="alert alert-danger"><?= e($createAdminErrors['csrf']) ?></div>
+                  <?php endif; ?>
+                  <form method="post" class="card">
+                    <div class="card-body">
+                      <h5 class="card-title mb-3">Créer un administrateur</h5>
+                      <input type="hidden" name="action" value="create_admin">
+                      <input type="hidden" name="csrf" value="<?= e($csrf ?? '') ?>">
+                      <input type="hidden" name="role" value="administrateur">
+                      <div class="mb-3">
+                        <label for="create-admin-email" class="form-label">Email</label>
+                        <input type="email" class="form-control<?= !empty($createAdminErrors['email']) ? ' is-invalid' : '' ?>" id="create-admin-email" name="email" value="<?= e($createAdminOld['email']) ?>" required>
+                        <?php if (!empty($createAdminErrors['email'])): ?>
+                          <div class="invalid-feedback"><?= e($createAdminErrors['email']) ?></div>
+                        <?php endif; ?>
+                      </div>
+                      <div class="mb-3">
+                        <label for="create-admin-pseudo" class="form-label">Pseudo</label>
+                        <input type="text" class="form-control<?= !empty($createAdminErrors['pseudo']) ? ' is-invalid' : '' ?>" id="create-admin-pseudo" name="pseudo" value="<?= e($createAdminOld['pseudo']) ?>" required>
+                        <?php if (!empty($createAdminErrors['pseudo'])): ?>
+                          <div class="invalid-feedback"><?= e($createAdminErrors['pseudo']) ?></div>
+                        <?php endif; ?>
+                      </div>
+                      <div class="mb-3">
+                        <label for="create-admin-password" class="form-label">Mot de passe</label>
+                        <input type="password" class="form-control<?= !empty($createAdminErrors['password']) ? ' is-invalid' : '' ?>" id="create-admin-password" name="password" required>
+                        <?php if (!empty($createAdminErrors['password'])): ?>
+                          <div class="invalid-feedback"><?= e($createAdminErrors['password']) ?></div>
+                        <?php endif; ?>
+                      </div>
+                      <div class="mb-3">
+                        <label for="create-admin-password-confirm" class="form-label">Confirmation du mot de passe</label>
+                        <input type="password" class="form-control<?= !empty($createAdminErrors['password_confirm']) ? ' is-invalid' : '' ?>" id="create-admin-password-confirm" name="password_confirm" required>
+                        <?php if (!empty($createAdminErrors['password_confirm'])): ?>
+                          <div class="invalid-feedback"><?= e($createAdminErrors['password_confirm']) ?></div>
+                        <?php endif; ?>
+                      </div>
+                      <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary">Créer le compte</button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -309,12 +359,49 @@ $admin = $_SESSION['user'] ?? [];
   </div>
 </div>
 
-
+<script>
+  window.__ADMIN_MODERATION__ = <?= json_encode([
+                                  'csrf' => (string)$csrf,
+                                  'moderatorId' => (int)($admin['id'] ?? 0),
+                                  'count' => (int)$total,
+                                  'endpoint' => url('admin'),
+                                  'query' => (string)($_SERVER['QUERY_STRING'] ?? ''),
+                                ], JSON_UNESCAPED_UNICODE) ?>;
+</script>
 <script>
   // Expose initial stats (server-side) for instant render
   window.__ADMIN_STATS__ = <?= json_encode($stats ?? ['rides' => ['labels' => [], 'values' => []], 'revenue' => ['labels' => [], 'values' => []], 'total_revenue' => 0]) ?>;
 </script>
 <script src="<?= BASE_URL ?>/assets/JS/admin.js" defer></script>
+<script>
+  (function() {
+    var initialTab = <?= json_encode($tab) ?>;
+    if (!initialTab) return;
+    var map = {
+      dashboard: 'tab-dashboard',
+      users: 'tab-users',
+      stats: 'tab-stats',
+      pending: 'avis-en-attente',
+      create: 'tab-settings'
+    };
+    var targetId = map[initialTab];
+    if (!targetId) return;
+    var activate = function() {
+      var trigger = document.querySelector('[data-bs-target="#' + targetId + '"], a[href="#' + targetId + '"]');
+      if (!trigger) return;
+      if (window.bootstrap && bootstrap.Tab) {
+        bootstrap.Tab.getOrCreateInstance(trigger).show();
+      } else if (typeof trigger.click === 'function') {
+        trigger.click();
+      }
+    };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', activate);
+    } else {
+      activate();
+    }
+  })();
+</script>
 
 <div class="page-profil">
   <?php include_once __DIR__ . '/../includes/footer.php'; ?>

@@ -49,6 +49,17 @@ $bp-topcards: 425px;
   }
 }
 
+.chart-warp{
+  position: relative;
+  width: 100%;
+  min-height: 170px;
+  height: 170px;
+
+  canvas{
+    width: 100% !important;
+    height: 100% !important;
+  }
+}
 
 /* Par défaut (≥ 1152px) tu restes sur le grid Bootstrap: 
    col-lg-4 / col-lg-8 => 2 colonnes */

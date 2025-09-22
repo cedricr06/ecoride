@@ -475,15 +475,55 @@ include_once __DIR__ . '/../includes/header.php';
           <button class="btn btn-success" disabled title="Vous êtes le conducteur">Participer</button>
 
         <?php elseif (!$hasActiveParticipation): ?>
-          <form method="post"
-            action="<?= url('trajet/' . (int)$trip['id'] . '/participer') ?>"
+          <?php $tripId = (int)$trip['id']; ?>
+          <form id="participer-form-<?= $tripId ?>"
+            method="post"
             class="d-inline"
-            onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').textContent = 'Patientez…';">
+            data-trip-id="<?= $tripId ?>">
+
             <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
-            <button type="submit" class="btn btn-success">Participer</button>
+            <input type="hidden" name="action" value="participer">
+            <input type="hidden" name="id" value="<?= $tripId ?>"> <!-- utile si ton handler relit $_POST['id'] -->
+
+            <button type="button"
+              class="btn btn-success"
+              data-role="submit-trigger"
+              data-bs-toggle="modal"
+              data-bs-target="#confirmParticiper-<?= $tripId ?>">
+              Participer
+            </button>
           </form>
-        <?php endif; ?>
+
+          <!-- Modal de confirmation -->
+          <div class="modal fade"
+            id="confirmParticiper-<?= (int)$tripId ?>"
+            tabindex="-1"
+            aria-labelledby="confirmParticiperLabel-<?= (int)$tripId ?>"
+            aria-hidden="true"
+            data-trip-id="<?= (int)$tripId ?>">
+            ...
+            <button type="button" class="btn btn-primary js-confirm">Oui, je confirme</button>
+
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content rounded-4">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="confirmParticiperLabel-<?= $tripId ?>">Confirmer votre participation</h5>
+                  <button type="submit" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                  Voulez-vous vraiment participer à ce trajet ?
+                  <div class="small text-muted mt-2">Vous pourrez annuler selon les conditions prévues.</div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Non</button>
+                  <button type="button" class="btn btn-primary js-confirm">Oui, je confirme</button>
+                </div>
+              </div>
+            </div>
+          </div>
       </div>
+    <?php endif; ?>
+    </div>
     </div>
     <!-- -->
   </section>
@@ -541,5 +581,7 @@ include_once __DIR__ . '/../includes/header.php';
   </section>
 
 </main>
+
+
 
 <?php include_once __DIR__ . '/../includes/footer.php'; ?>

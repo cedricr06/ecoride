@@ -2,6 +2,11 @@
 // Page: Proposer un trajet (GET: afficher formulaire, POST: valider + insérer)
 require_login();
 
+if (($_SESSION['user']['role'] ?? '') === 'administrateur') {
+    header('Location: ' . BASE_URL . '/admin');
+    exit;
+}
+
 // Helpers DB / session
 /** @var PDO $db */
 if (!isset($db)) { $db = db(); }
