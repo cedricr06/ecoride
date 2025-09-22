@@ -160,62 +160,158 @@ if ($fumeur === 'non') { $fumeur = '0'; }
 $hasSearch = ($ville_depart !== '' || $ville_arrivee !== '' || $date !== '');
 
 $trajets = [];
+$altTrajets = [];
+$requestedDate = null;
+$altRange = null;
+$fallbackAttempted = false;
+
+$dayStart = null;
+$dayEnd = null;
+if ($date !== '') {
+    try {
+        $tz = new DateTimeZone('Europe/Paris');
+        $parsedDate = DateTimeImmutable::createFromFormat('!Y-m-d', $date, $tz) ?: null;
+        if ($parsedDate instanceof DateTimeImmutable) {
+            $dayStart = $parsedDate->setTime(0, 0, 0);
+            $dayEnd = $dayStart->modify('+1 day');
+            $requestedDate = $dayStart;
+        }
+    } catch (Exception $e) {
+        $dayStart = null;
+        $dayEnd = null;
+        $requestedDate = null;
+    }
+}
+
 if ($hasSearch) {
     $pdo = $GLOBALS['db'] ?? (function_exists('db') ? db() : null);
     if ($pdo instanceof PDO) {
-        $joins = "\n    FROM voyages v\n    JOIN utilisateurs u  ON u.id = v.chauffeur_id\n    LEFT JOIN profils pr ON pr.utilisateur_id = u.id\n    JOIN vehicules ve    ON ve.id = v.vehicule_id\n    LEFT JOIN preferences pf ON pf.utilisateur_id = u.id\n";
+        $joins = "
+    FROM voyages v
+    JOIN utilisateurs u  ON u.id = v.chauffeur_id
+    LEFT JOIN profils pr ON pr.utilisateur_id = u.id
+    JOIN vehicules ve    ON ve.id = v.vehicule_id
+    LEFT JOIN preferences pf ON pf.utilisateur_id = u.id
+";
 
-        $where = [];
-        $params = [];
-        $where[] = "v.places_disponibles > 0";
-        $where[] = "v.statut = 'ouvert'";
+        $baseWhere = [
+            "v.places_disponibles > 0",
+            "v.statut = 'ouvert'"
+        ];
+        $baseParams = [];
 
         if ($ville_depart !== '') {
-            $where[] = "v.ville_depart LIKE :vd";
-            $params[':vd'] = '%' . $ville_depart . '%';
+            $baseWhere[] = "v.ville_depart LIKE :vd";
+            $baseParams[':vd'] = '%' . $ville_depart . '%';
         }
         if ($ville_arrivee !== '') {
-            $where[] = "v.ville_arrivee LIKE :va";
-            $params[':va'] = '%' . $ville_arrivee . '%';
+            $baseWhere[] = "v.ville_arrivee LIKE :va";
+            $baseParams[':va'] = '%' . $ville_arrivee . '%';
         }
-        if ($date !== '') {
-            $where[] = "DATE(v.date_depart) = :d";
-            $params[':d'] = $date;
-        }
-
         if ($energie !== '') {
-            $where[] = "ve.energie = :energie";
-            $params[':energie'] = $energie;
+            $baseWhere[] = "ve.energie = :energie";
+            $baseParams[':energie'] = $energie;
         }
-
         if ($prix_max !== '' && is_numeric($prix_max)) {
-            $where[] = "v.prix <= :prix_max";
-            $params[':prix_max'] = (float)$prix_max;
+            $baseWhere[] = "v.prix <= :prix_max";
+            $baseParams[':prix_max'] = (float)$prix_max;
         }
-
         if ($fumeur !== '' && ($fumeur === '0' || $fumeur === '1')) {
-            $where[] = "pf.fumeur = :fumeur";
-            $params[':fumeur'] = (int)$fumeur;
+            $baseWhere[] = "pf.fumeur = :fumeur";
+            $baseParams[':fumeur'] = (int)$fumeur;
         }
 
-        $sql = "\n  SELECT\n    v.id, v.ville_depart, v.ville_arrivee,\n    v.date_depart, v.date_arrivee, v.prix, v.places_disponibles, v.statut, v.ecologique,\n    u.pseudo, u.prenom, u.nom,\n    pr.date_naissance, pr.photo_url,\n    ve.marque, ve.modele, ve.couleur, ve.energie\n  $joins\n  " . (count($where) ? 'WHERE ' . implode(' AND ', $where) : '') . "\n  ORDER BY v.date_depart ASC\n  LIMIT 60\n";
+        $selectSql = "
+  SELECT
+    v.id, v.ville_depart, v.ville_arrivee,
+    v.date_depart, v.date_arrivee, v.prix, v.places_disponibles, v.statut, v.ecologique,
+    u.pseudo, u.prenom, u.nom,
+    pr.date_naissance, pr.photo_url,
+    ve.marque, ve.modele, ve.couleur, ve.energie
+  $joins
+";
 
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
+        $exactWhere = $baseWhere;
+        $exactParams = $baseParams;
+        if ($dayStart instanceof DateTimeImmutable && $dayEnd instanceof DateTimeImmutable) {
+            $exactWhere[] = "(v.date_depart >= :day_start AND v.date_depart < :day_end)";
+            $exactParams[':day_start'] = $dayStart->format('Y-m-d H:i:s');
+            $exactParams[':day_end'] = $dayEnd->format('Y-m-d H:i:s');
+        }
+
+        $sqlExact = $selectSql . (count($exactWhere) ? '  WHERE ' . implode(' AND ', $exactWhere) . "
+" : '') . "  ORDER BY v.date_depart ASC
+  LIMIT 60
+";
+
+        $stmt = $pdo->prepare($sqlExact);
+        $stmt->execute($exactParams);
         $trajets = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        if (empty($trajets) && $dayStart instanceof DateTimeImmutable && $dayEnd instanceof DateTimeImmutable) {
+            $fallbackAttempted = true;
+
+            $windowStart = $dayStart->modify('-3 days');
+            $windowEndExclusive = $dayEnd->modify('+3 days');
+
+            $nowParis = new DateTimeImmutable('now', $dayStart->getTimezone());
+            $effectiveWindowStart = $windowStart;
+            if ($nowParis > $effectiveWindowStart) {
+                $effectiveWindowStart = $nowParis;
+            }
+
+            $altRange = [$windowStart, $windowEndExclusive->modify('-1 day')];
+
+            $altWhere = $baseWhere;
+            $altParams = $baseParams;
+            $altWhere[] = "(v.date_depart >= :window_start AND v.date_depart < :window_end)";
+            $altParams[':window_start'] = $effectiveWindowStart->format('Y-m-d H:i:s');
+            $altParams[':window_end'] = $windowEndExclusive->format('Y-m-d H:i:s');
+            $altParams[':target_point'] = $dayStart->format('Y-m-d H:i:s');
+
+            $sqlAlt = $selectSql . '  WHERE ' . implode(' AND ', $altWhere) . "
+" .
+                "  ORDER BY ABS(TIMESTAMPDIFF(MINUTE, :target_point, v.date_depart)) ASC, v.date_depart ASC
+" .
+                "  LIMIT 50
+";
+
+            $stmt = $pdo->prepare($sqlAlt);
+            $stmt->execute($altParams);
+            $altTrajets = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        }
     }
 }
 ?>
+
 
 <section class="trajets-list container my-4">
   <?php if (!$hasSearch): ?>
     <div class="alert alert-light" role="alert">Renseignez au moins les infos trajet pour lancer une recherche.</div>
   <?php else: ?>
-    <?php if (empty($trajets)): ?>
-      <div class="alert alert-info" role="alert">Aucun trajet trouvé pour ces critères.</div>
+    <?php
+    $listToRender = !empty($trajets) ? $trajets : $altTrajets;
+    ?>
+    <?php if (empty($listToRender)): ?>
+      <?php if ($fallbackAttempted && $requestedDate instanceof DateTimeImmutable): ?>
+        <div class="alert alert-info" role="alert">Aucun trajet trouvé.</div>
+      <?php else: ?>
+        <div class="alert alert-info" role="alert">Aucun trajet trouvé pour ces critères.</div>
+      <?php endif; ?>
     <?php else: ?>
+      <?php if (empty($trajets) && !empty($altTrajets) && $requestedDate instanceof DateTimeImmutable && is_array($altRange)): ?>
+        <?php
+          $rangeStart = $altRange[0] ?? null;
+          $rangeEnd = $altRange[1] ?? null;
+          $rangeStartText = $rangeStart instanceof DateTimeImmutable ? $rangeStart->format('d/m/Y') : '';
+          $rangeEndText = $rangeEnd instanceof DateTimeImmutable ? $rangeEnd->format('d/m/Y') : '';
+        ?>
+        <div class="alert alert-info" role="alert">
+          Aucun trajet le <?= e($requestedDate->format('d/m/Y')) ?>. Voici les trajets du <?= e($rangeStartText) ?> au <?= e($rangeEndText) ?>.
+        </div>
+      <?php endif; ?>
       <div class="trajets-grid">
-        <?php foreach ($trajets as $row): ?>
+        <?php foreach ($listToRender as $row): ?>
           <?php
           $avatar = '';
           if (!empty($row['photo_url'])) {
@@ -350,6 +446,7 @@ if ($hasSearch) {
           </article>
         <?php endforeach; ?>
       </div>
+
     <?php endif; ?>
   <?php endif; ?>
 </section>

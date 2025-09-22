@@ -97,6 +97,7 @@ function get_pdo(): ?PDO
 // ---------------------------------------------------------------------
 // Validation ID + récupération
 // ---------------------------------------------------------------------
+
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 if (!$id) {
   http_response_code(404);
@@ -118,6 +119,8 @@ if (!$pdo) {
 
 // ---------------------------------------------------------------------
 // Session + utilisateur courant
+// ---------------------------------------------------------------------
+
 if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 $userId = $_SESSION['user']['id']
   ?? $_SESSION['utilisateur']['id']
@@ -128,6 +131,10 @@ $isDriver = false;
 $myParticipation = null;
 $placesTotal = 0;
 $placesRestantes = 0;
+
+
+
+
 // ---------------------------------------------------------------------
 // POST Participer
 // ---------------------------------------------------------------------
@@ -279,7 +286,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST'
   }
 }
 
-// Participation de l'utilisateur courant (s'il est connecté)
+
 // ---------------------------------------------------------------------
 // Récupération des données du trajet
 // NOTE: Adapter les noms de tables/colonnes si votre schéma diffère
@@ -326,6 +333,61 @@ if (!$trip) {
   include_once __DIR__ . '/../includes/footer.php';
   return;
 }
+
+// ----------------------------------------------------------------------------------
+// ---------------- Avis (par voyage si dispo, sinon par conducteur) ----------------
+// ----------------------------------------------------------------------------------
+
+$reviews = [];
+$reviewsTotal = 0;
+$avgNote = null;
+
+try {
+  $sql = "
+    SELECT a.id, a.auteur_pseudo, a.note, a.commentaire, a.created_at
+    FROM avis a
+    WHERE a.voyage_id = :v
+    ORDER BY a.created_at DESC
+    LIMIT 20";
+  $st = $pdo->prepare($sql);
+  $st->execute([':v' => $id]);
+  $reviews = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+  $stCount = $pdo->prepare("
+    SELECT COUNT(*), COALESCE(AVG(a.note),0)
+    FROM avis a
+    WHERE a.voyage_id = :v");
+  $stCount->execute([':v' => $id]);
+  [$reviewsTotal, $avgFloat] = $stCount->fetch(PDO::FETCH_NUM);
+  $avgNote = $reviewsTotal ? (float)$avgFloat : null;
+
+  if (!$reviews) { throw new RuntimeException('fallback_conducteur'); }
+} catch (Throwable $e) {
+  try {
+    $sql = "
+      SELECT a.id, a.auteur_pseudo, a.note, a.commentaire, a.created_at
+      FROM avis a
+      WHERE a.conducteur_id = :u
+      ORDER BY a.created_at DESC
+      LIMIT 20";
+    $st = $pdo->prepare($sql);
+    $st->execute([':u' => $trip['conducteur_id']]);
+    $reviews = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    $stCount = $pdo->prepare("
+      SELECT COUNT(*), COALESCE(AVG(a.note),0)
+      FROM avis a
+      WHERE a.conducteur_id = :u");
+    $stCount->execute([':u' => $trip['conducteur_id']]);
+    [$reviewsTotal, $avgFloat] = $stCount->fetch(PDO::FETCH_NUM);
+    $avgNote = $reviewsTotal ? (float)$avgFloat : null;
+  } catch (Throwable $e2) {
+    $reviews = [];
+    $reviewsTotal = 0;
+    $avgNote = null;
+  }
+}
+
 
 // Déterminer si l'utilisateur est le conducteur
 $isDriver = !empty($userId) && isset($trip['conducteur_id']) && ((int)$userId === (int)$trip['conducteur_id']);
@@ -555,30 +617,45 @@ include_once __DIR__ . '/../includes/header.php';
 
   <!-- D. Derniers avis -->
   <section class="card shadow rounded-4 mb-4">
-    <div class="card-body">
-      <h5 class="card-title">Derniers avis</h5>
-      <?php if (!$reviews): ?>
-        <p class="text-muted-admin mb-0">Pas encore d'avis.</p>
-        <?php else: foreach ($reviews as $r): ?>
-          <article class="mb-3 border-bottom pb-2">
-            <div class="d-flex align-items-center justify-content-between">
-              <strong><?= e($r['auteur_pseudo'] ?? 'Anonyme') ?></strong>
-              <span><?= starsHtml($r['note'] ?? 0) ?></span>
-            </div>
-            <div class="text-muted-admin small mb-1">
-              <?php try {
-                $d = new DateTime($r['created_at']);
-                echo e($d->format('d/m/Y H:i'));
-              } catch (Throwable $e) {
-                echo '';
-              } ?>
-            </div>
-            <p class="mb-0"><?= e(mb_strimwidth((string)($r['commentaire'] ?? ''), 0, 220, '…', 'UTF-8')) ?></p>
-          </article>
-      <?php endforeach;
-      endif; ?>
+  <div class="card-body">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <h5 class="card-title mb-0">Avis</h5>
+      <div>
+        <?php if ($avgNote !== null): ?>
+          <span class="me-2 align-middle"><?= starsHtml($avgNote) ?></span>
+          <span class="text-muted small align-middle">
+            <?= number_format($avgNote, 1, ',', '') ?> / 5 &middot; <?= (int)$reviewsTotal ?> avis
+          </span>
+        <?php else: ?>
+          <span class="text-muted small">Aucun avis pour le moment</span>
+        <?php endif; ?>
+      </div>
     </div>
-  </section>
+
+    <?php if (!$reviews): ?>
+      <p class="text-muted-admin mb-0">Pas encore d'avis.</p>
+    <?php else: ?>
+      <?php foreach ($reviews as $r): ?>
+        <article class="mb-3 border-bottom pb-2">
+          <div class="d-flex align-items-center justify-content-between">
+            <strong><?= e($r['auteur_pseudo'] ?? 'Anonyme') ?></strong>
+            <span class="ms-2"><?= starsHtml($r['note'] ?? 0) ?></span>
+          </div>
+          <div class="text-muted-admin small mb-1">
+            <?php
+              try { $d = new DateTime($r['created_at']); echo e($d->format('d/m/Y H:i')); }
+              catch (Throwable $e) { echo ''; }
+            ?>
+          </div>
+          <p class="mb-0">
+            <?= e((string)($r['commentaire'] ?? '')) ?>
+          </p>
+        </article>
+      <?php endforeach; ?>
+      <!-- si tu veux paginer/“voir plus”, ajoute un lien ici -->
+    <?php endif; ?>
+  </div>
+</section>
 
 </main>
 
