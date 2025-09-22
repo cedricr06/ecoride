@@ -129,7 +129,7 @@ include_once __DIR__ . '/../includes/header.php';
               <?= (int)($user['credits'] ?? 0) ?> crédits
             </span>
           </div>
-          <p class="small infos-profil mt-2 mb-0">Gain de 2 crédits par passager transporté.</p>
+          
         </div>
       </div>
 
@@ -280,32 +280,21 @@ include_once __DIR__ . '/../includes/header.php';
                         $hasArrived = !empty($v['has_arrived'] ?? false);
                         if ($hasArrived || $statut === 'valide') {
                         ?>
-                          <span class="badge bg-success-subtle text-success">Effectu�</span>
+                          <span class="badge bg-success-subtle text-success">Effectuer</span>
                         <?php
                         } elseif ($statut === 'annule') {
-                          // Trajet annul�
+                          // Trajet annuler
                         ?>
-                          <span class="badge bg-danger-subtle text-danger">Annul�</span>
+                          <span class="badge bg-danger-subtle text-danger">Annuler</span>
                         <?php
                         } else {
                             if (!$hasStarted) {
                         ?>
-                              <form method="post"
-                                action="<?= e(BASE_URL . '/profil/voyages/' . (int)$v['id'] . '/valider') ?>"
-                                class="m-0">
-                                <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
-                                <input type="hidden" name="voyage_id" value="<?= (int)$v['id'] ?>">
-                                <button class="btn btn-success btn-sm">Demarrer</button>
-                              </form>
+                              <span class="badge bg-warning-subtle text-warning">À démarrer</span>
                         <?php
                             } else {
                         ?>
-                              <form method="post"
-                                action="<?= e(BASE_URL . '/profil/voyages/' . (int)$v['id'] . '/valider') ?>"
-                                class="m-0">
-                                <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
-                                <button class="btn btn-primary btn-sm">Arrivee a destination</button>
-                              </form>
+                              <span class="badge bg-info-subtle text-info">En cours</span>
                         <?php
                             }
                         }
