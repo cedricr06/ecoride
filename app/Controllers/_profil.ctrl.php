@@ -609,7 +609,7 @@ function passenger_cancel_participation(PDO $db, array $participation, int $uid)
         }
 
         // Calcul du délai avant départ (TZ Europe/Paris)
-        $tz = new DateTimeZone('Europe/Paris');
+        $tz = new DateTimeZone('Europe/Paris'); // TZ Europe/Paris
         $now = new DateTime('now', $tz);
         $departure = new DateTime($participation['date_depart'], $tz);
         $minutesBeforeDeparture = floor(($departure->getTimestamp() - $now->getTimestamp()) / 60);
@@ -908,6 +908,7 @@ function release_due_trips(PDO $db): void
                                 FROM voyages WHERE id=:id FOR UPDATE");
             $st->execute([':id' => $v['id']]);
             $row = $st->fetch(PDO::FETCH_ASSOC);
+            // idempotent
             if (!$row || $row['payout_status'] !== 'pending') {
                 $db->rollBack();
                 continue;
