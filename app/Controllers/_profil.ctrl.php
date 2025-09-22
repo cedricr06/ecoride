@@ -813,6 +813,8 @@ if (!function_exists('trajet_participer')) {
 
 // Chauffeur : valider 
 // Chauffeur : valider 
+// Implements the state machine for starting and ending a trip (start/arrival events).
+// This operation is idempotent and does not involve money transfer.
 if (!function_exists('profile_voyage_accept')) {
     function profile_voyage_accept(PDO $db, int $voyageId, int $uid): void
     {
