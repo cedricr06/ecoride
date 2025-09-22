@@ -393,6 +393,7 @@ include_once __DIR__ . '/../includes/header.php';
             <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
             <input type="hidden" name="action" value="trajet_participer">
             <input type="hidden" name="id" value="<?= $tripId ?>">
+            <input type="hidden" name="places" value="1">
 
             <button type="button"
               class="btn btn-success"
@@ -407,10 +408,7 @@ include_once __DIR__ . '/../includes/header.php';
           <div class="modal fade" id="confirmParticiper-<?= (int)$tripId ?>" tabindex="-1" aria-labelledby="confirmParticiperLabel-<?= (int)$tripId ?>" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
               <div class="modal-content rounded-4">
-                <form action="<?= url('profil') ?>" method="post">
-                    <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
-                    <input type="hidden" name="action" value="trajet_participer">
-                    <input type="hidden" name="id" value="<?= $tripId ?>">
+                
                     <div class="modal-header">
                       <h5 class="modal-title" id="confirmParticiperLabel-<?= $tripId ?>">Confirmer votre participation</h5>
                       <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
@@ -419,15 +417,15 @@ include_once __DIR__ . '/../includes/header.php';
                       <p>Voulez-vous vraiment participer à ce trajet ?</p>
                       <div class="mb-3">
                           <label for="places-<?= $tripId ?>" class="form-label">Nombre de places à réserver :</label>
-                          <input type="number" name="places" id="places-<?= $tripId ?>" class="form-control" value="1" min="1" max="<?= $placesRestantes ?>" required>
+                          <input type="number" id="places-<?= $tripId ?>" class="form-control" value="1" min="1" max="<?= $placesRestantes ?>" required>
                       </div>
                       <div class="small text-muted mt-2">Vous pourrez annuler selon les conditions prévues.</div>
                     </div>
                     <div class="modal-footer">
                       <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Non</button>
-                      <button type="submit" class="btn btn-primary">Oui, je confirme</button>
+                      <button type="button" class="btn btn-primary js-confirm-participation">Oui, je confirme</button>
                     </div>
-                </form>
+                
               </div>
             </div>
           </div>

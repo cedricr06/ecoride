@@ -1,58 +1,87 @@
-// /assets/js/trajet.js
 (function () {
-  // Clic sur "Oui, je confirme" (dans n'importe quel modal portant data-trip-id)
-  document.addEventListener('click', function (ev) {
-    const confirmBtn = ev.target.closest('.js-confirm');
-    if (!confirmBtn) return;
+    // Anti double-submit
+    const disableParticipationButton = (form) => {
+        const trigger = form.querySelector('[data-role="submit-trigger"]');
+        if (trigger) {
+            trigger.disabled = true;
+            trigger.textContent = 'Patientez…';
+        }
+    };
 
-    const modalEl = confirmBtn.closest('.modal[data-trip-id]');
-    if (!modalEl) return;
-    const tripId = modalEl.getAttribute('data-trip-id');
+    // Main logic: handle confirmation click
+    document.addEventListener('click', function (ev) {
+        const confirmBtn = ev.target.closest('.js-confirm-participation');
+        if (!confirmBtn) return;
 
-    const form = document.getElementById('participer-form-' + tripId);
-    if (!form) return;
+        const modalEl = confirmBtn.closest('.modal');
+        if (!modalEl) return;
 
-    const trigger = form.querySelector('[data-role="submit-trigger"]');
-    if (trigger) {
-      trigger.disabled = true;
-      trigger.textContent = 'Patientez…';
-    }
+        const tripIdMatch = modalEl.id.match(/confirmParticiper-(\d+)/);
+        if (!tripIdMatch) return;
+        const tripId = tripIdMatch[1];
 
-    // Ferme le modal si Bootstrap est chargé
-    if (window.bootstrap && bootstrap.Modal) {
-      const instance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-      instance.hide();
-    }
+        const form = document.getElementById('participer-form-' + tripId);
+        if (!form) return;
 
-    form.submit();
-  });
+        const placesInput = document.getElementById('places-' + tripId);
+        let n = 1;
+        if (placesInput) {
+            n = parseInt(placesInput.value, 10);
+            if (!Number.isFinite(n) || n < 1) {
+                n = 1;
+            }
+            const maxPlaces = placesInput.getAttribute('max');
+            if (maxPlaces) {
+                const max = parseInt(maxPlaces, 10);
+                if (Number.isFinite(max)) {
+                    n = Math.min(n, max);
+                }
+            }
+        }
 
-  // Anti double-submit au cas où le form est soumis autrement
-  document.addEventListener('submit', function (ev) {
-    const form = ev.target.closest('form[id^="participer-form-"]');
-    if (!form) return;
-    const trigger = form.querySelector('[data-role="submit-trigger"]');
-    if (trigger) {
-      trigger.disabled = true;
-      trigger.textContent = 'Patientez…';
-    }
-  });
+        const hiddenPlacesInput = form.querySelector('input[name="places"]');
+        if (hiddenPlacesInput) {
+            hiddenPlacesInput.value = n;
+        } else {
+            // As a fallback, create it if it does not exist
+            const newHiddenInput = document.createElement('input');
+            newHiddenInput.type = 'hidden';
+            newHiddenInput.name = 'places';
+            newHiddenInput.value = n;
+            form.appendChild(newHiddenInput);
+        }
+        
+        disableParticipationButton(form);
 
-  // Fallback si Bootstrap JS n'est pas chargé : remplace l’ouverture du modal par un confirm() natif
-  document.addEventListener('click', function (ev) {
-    const trigger = ev.target.closest('[data-role="submit-trigger"]');
-    if (!trigger) return;
+        // Close modal
+        if (window.bootstrap && bootstrap.Modal) {
+            const instance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            instance.hide();
+        }
 
-    // Si Bootstrap est présent, on laisse le data-bs-toggle gérer l’ouverture du modal
-    if (window.bootstrap && bootstrap.Modal) return;
+        form.submit();
+    });
 
-    const form = trigger.closest('form');
-    if (!form) return;
+    // Fallback for old browsers or if Bootstrap JS fails
+    document.addEventListener('click', function (ev) {
+        const trigger = ev.target.closest('[data-role="submit-trigger"]');
+        if (!trigger) return;
 
-    if (confirm("Êtes-vous sûr de vouloir participer à ce trajet ?")) {
-      trigger.disabled = true;
-      trigger.textContent = 'Patientez…';
-      form.submit();
-    }
-  });
+        if (window.bootstrap && bootstrap.Modal) return;
+
+        const form = trigger.closest('form');
+        if (!form) return;
+
+        if (confirm("Êtes-vous sûr de vouloir participer à ce trajet ? (Veuillez noter que le nombre de places n'est pas géré sans Javascript actif)")) {
+            disableParticipationButton(form);
+            form.submit();
+        }
+    });
+
+    // Anti double-submit on the form itself
+    document.addEventListener('submit', function (ev) {
+        const form = ev.target.closest('form[id^="participer-form-"]');
+        if (!form) return;
+        disableParticipationButton(form);
+    });
 })();
