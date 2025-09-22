@@ -884,6 +884,9 @@ if (!function_exists('queueRideValidationInvites')) {
 
 function release_due_trips(PDO $db): void
 {
+    // This function handles the payout for completed trips.
+    // It is designed to be run as a cron job.
+    // It is idempotent and handles multi-place bookings.
     if (!defined('COMMISSION_CREDITS')) define('COMMISSION_CREDITS', 2);
 
     $sql = "SELECT v.id, v.chauffeur_id, v.prix
