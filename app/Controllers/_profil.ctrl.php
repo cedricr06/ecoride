@@ -2,6 +2,15 @@
 require_login();
 global $db;
 
+// --- Hook pour l'audit SELECT-only (BLOC 6)
+if (isset($_GET['audit']) && $_GET['audit'] === 'true') {
+    if (function_exists('audit_ledger_consistency')) {
+        header('Content-Type: application/json');
+        echo json_encode(audit_ledger_consistency($db));
+        exit;
+    }
+}
+
 /* -------------------- Utils -------------------- */
 
 function yearsFromDate(?string $date): ?int
@@ -649,7 +658,7 @@ function passenger_cancel_participation(PDO $db, array $participation, int $uid)
 
     } catch (Throwable $e) {
         if ($db->inTransaction()) $db->rollBack();
-        if (function_exists('flash')) flash('danger', 'Erreur technique lors de l'annulation: ' . $e->getMessage());
+        if (function_exists('flash')) flash('danger', "Erreur technique lors de l'annulation: " . $e->getMessage());
     }
 }
 
@@ -711,7 +720,7 @@ function driver_cancel_voyage(PDO $db, array $voyage, int $uid): void
 
     } catch (Throwable $e) {
         if ($db->inTransaction()) $db->rollBack();
-        if (function_exists('flash')) flash('danger', 'Erreur technique lors de l'annulation du trajet: ' . $e->getMessage());
+        if (function_exists('flash')) flash('danger', "Erreur technique lors de l'annulation du trajet: " . $e->getMessage());
     }
 }
 
@@ -1013,7 +1022,7 @@ function profile_list_my_voyages(PDO $db, int $uid, string $view = 'upcoming'): 
         DATE_FORMAT(v.date_depart, '%H:%i')     AS heure,
         v.prix,
         COALESCE(v.statut,'') AS statut,
-        CASE WHEN ve.energie IN ('Electrique','�lectrique','Hybride','Hybride rechargeable') THEN 1 ELSE 0 END AS eco,
+        CASE WHEN ve.energie IN ('Electrique','lectrique','Hybride','Hybride rechargeable') THEN 1 ELSE 0 END AS eco,
         COALESCE(tx.started, 0) AS has_started,
         COALESCE(tx.arrived, 0) AS has_arrived
       FROM voyages v
@@ -1041,3 +1050,48 @@ function profile_list_my_voyages(PDO $db, int $uid, string $view = 'upcoming'): 
     return $rows;
 }
 
+function audit_ledger_consistency(PDO $db): array
+{
+    // 1. Site vs ledger
+    $st1 = $db->query("
+        SELECT
+          sw.balance AS site_balance,
+          COALESCE(SUM(CASE WHEN t.direction='credit' THEN t.amount ELSE -t.amount END),0) AS site_ledger
+        FROM site_wallet sw
+        LEFT JOIN transactions t ON t.user_id IS NULL;
+    ");
+    $site_reconciliation = $st1->fetch(PDO::FETCH_ASSOC);
+
+    // 2. Top deltas users
+    $st2 = $db->query("
+        SELECT u.id, u.pseudo, u.credits,
+               COALESCE(SUM(CASE WHEN t.direction='credit' THEN t.amount ELSE -t.amount END),0) AS ledger,
+               (u.credits - COALESCE(SUM(CASE WHEN t.direction='credit' THEN t.amount ELSE -t.amount END),0)) AS delta
+        FROM utilisateurs u
+        LEFT JOIN transactions t ON t.user_id = u.id
+        GROUP BY u.id
+        HAVING ABS(delta) <> 0
+        ORDER BY ABS(delta) DESC
+        LIMIT 10;
+    ");
+    $user_deltas = $st2->fetchAll(PDO::FETCH_ASSOC);
+
+    // 3. Synthèse par voyage
+    $st3 = $db->query("
+        SELECT voyage_id,
+          SUM(CASE WHEN reason='participation_pay' AND direction='credit' THEN amount END) AS escrow_in,
+          SUM(CASE WHEN reason='driver_payout'      AND direction='debit'  THEN amount END) AS escrow_out,
+          SUM(CASE WHEN reason='site_commission'    AND direction='credit' THEN amount END) AS commission
+        FROM transactions
+        GROUP BY voyage_id
+        ORDER BY voyage_id DESC
+        LIMIT 10;
+    ");
+    $trip_synthesis = $st3->fetchAll(PDO::FETCH_ASSOC);
+
+    return [
+        'site_reconciliation' => $site_reconciliation,
+        'user_deltas' => $user_deltas,
+        'trip_synthesis' => $trip_synthesis,
+    ];
+}
