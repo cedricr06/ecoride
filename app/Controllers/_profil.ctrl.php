@@ -898,10 +898,11 @@ if (!function_exists('profile_voyage_accept')) {
             $checkArrived->closeCursor();
 
             if (!$hasStarted) {
-                // Idempotence : si une transaction driver_payout existe déjà pour ce voyage_id, ne paie pas à nouveau
-                $check_payout = $db->prepare("SELECT 1 FROM transactions WHERE voyage_id=:v AND reason='driver_payout' LIMIT 1");
-                $check_payout->execute([':v' => $voyageId]);
-                if (!$check_payout->fetchColumn()) {
+                // Idempotence : si le versement n'a pas déjà été effectué
+                $st_payout_status = $db->prepare("SELECT payout_status FROM voyages WHERE id=:v FOR UPDATE");
+                $st_payout_status->execute([':v' => $voyageId]);
+                $current_payout_status = $st_payout_status->fetchColumn();
+                if ($current_payout_status !== 'released') {
                     // Calcule le total encaissé et le nombre de participations actives
                     $st_calc_payout = $db->prepare("SELECT COUNT(*) AS nb, COALESCE(SUM(COALESCE(p.prix, v.prix)), 0) AS paid FROM participations p JOIN voyages v ON v.id=:v WHERE p.voyage_id=:v AND p.statut IN ('en_attente','confirme')");
                     $st_calc_payout->execute([':v' => $voyageId]);
