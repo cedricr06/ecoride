@@ -391,7 +391,7 @@ include_once __DIR__ . '/../includes/header.php';
             data-trip-id="<?= $tripId ?>">
 
             <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
-            <input type="hidden" name="action" value="trajet_participer">
+            <input type="hidden" name="action" value="participer">
             <input type="hidden" name="id" value="<?= $tripId ?>">
             <input type="hidden" name="places" value="1">
 
@@ -415,10 +415,6 @@ include_once __DIR__ . '/../includes/header.php';
                     </div>
                     <div class="modal-body">
                       <p>Voulez-vous vraiment participer à ce trajet ?</p>
-                      <div class="mb-3">
-                          <label for="places-<?= $tripId ?>" class="form-label">Nombre de places à réserver :</label>
-                          <input type="number" id="places-<?= $tripId ?>" class="form-control" value="1" min="1" max="<?= $placesRestantes ?>" required>
-                      </div>
                       <div class="small text-muted mt-2">Vous pourrez annuler selon les conditions prévues.</div>
                     </div>
                     <div class="modal-footer">

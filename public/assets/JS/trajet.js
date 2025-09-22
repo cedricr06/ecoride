@@ -23,31 +23,15 @@
         const form = document.getElementById('participer-form-' + tripId);
         if (!form) return;
 
-        const placesInput = document.getElementById('places-' + tripId);
-        let n = 1;
-        if (placesInput) {
-            n = parseInt(placesInput.value, 10);
-            if (!Number.isFinite(n) || n < 1) {
-                n = 1;
-            }
-            const maxPlaces = placesInput.getAttribute('max');
-            if (maxPlaces) {
-                const max = parseInt(maxPlaces, 10);
-                if (Number.isFinite(max)) {
-                    n = Math.min(n, max);
-                }
-            }
-        }
-
         const hiddenPlacesInput = form.querySelector('input[name="places"]');
         if (hiddenPlacesInput) {
-            hiddenPlacesInput.value = n;
+            hiddenPlacesInput.value = 1; // Force 1 place
         } else {
             // As a fallback, create it if it does not exist
             const newHiddenInput = document.createElement('input');
             newHiddenInput.type = 'hidden';
             newHiddenInput.name = 'places';
-            newHiddenInput.value = n;
+            newHiddenInput.value = 1; // Force 1 place
             form.appendChild(newHiddenInput);
         }
         
@@ -72,7 +56,7 @@
         const form = trigger.closest('form');
         if (!form) return;
 
-        if (confirm("Êtes-vous sûr de vouloir participer à ce trajet ? (Veuillez noter que le nombre de places n'est pas géré sans Javascript actif)")) {
+        if (confirm("Êtes-vous sûr de vouloir participer à ce trajet ?")) { // Removed the specific message about places not being managed
             disableParticipationButton(form);
             form.submit();
         }
