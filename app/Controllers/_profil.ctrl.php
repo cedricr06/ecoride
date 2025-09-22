@@ -1043,9 +1043,18 @@ function profile_list_my_voyages(PDO $db, int $uid, string $view = 'upcoming'): 
         DATE_FORMAT(v.date_depart, '%H:%i')     AS heure,
         v.prix,
         COALESCE(v.statut,'') AS statut,
-        CASE WHEN ve.energie IN ('Electrique','Électrique','Hybride','Hybride rechargeable') THEN 1 ELSE 0 END AS eco
+        CASE WHEN ve.energie IN ('Electrique','�lectrique','Hybride','Hybride rechargeable') THEN 1 ELSE 0 END AS eco,
+        COALESCE(tx.started, 0) AS has_started,
+        COALESCE(tx.arrived, 0) AS has_arrived
       FROM voyages v
       LEFT JOIN vehicules ve ON ve.id = v.vehicule_id
+      LEFT JOIN (
+        SELECT voyage_id,
+               MAX(CASE WHEN reason = 'trip_started' THEN 1 ELSE 0 END) AS started,
+               MAX(CASE WHEN reason = 'trip_arrived' THEN 1 ELSE 0 END) AS arrived
+        FROM transactions
+        GROUP BY voyage_id
+      ) tx ON tx.voyage_id = v.id
       WHERE v.chauffeur_id = :u
       $extra
       $order
@@ -1054,7 +1063,11 @@ function profile_list_my_voyages(PDO $db, int $uid, string $view = 'upcoming'): 
     $st = $db->prepare($sql);
     $st->execute([':u' => $uid]);
     $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    foreach ($rows as &$r) $r['eco'] = (bool)$r['eco'];
+    foreach ($rows as &$r) {
+      $r['eco'] = (bool)$r['eco'];
+      $r['has_started'] = !empty($r['has_started']);
+      $r['has_arrived'] = !empty($r['has_arrived']);
+    }
     return $rows;
 }
 
