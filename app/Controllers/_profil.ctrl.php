@@ -870,11 +870,21 @@ if (!function_exists('trajet_participer')) {
 if (!function_exists('profile_voyage_accept')) {
     function profile_voyage_accept(PDO $db, int $voyageId, int $uid): void
     {
-        if ($voyageId <= 0 || $uid <= 0) return;
-
         try {
             if (function_exists('require_post')) require_post();
             if (function_exists('verify_csrf')) verify_csrf();
+
+            // récup depuis la route OU fallback sur POST
+            // Assuming $voyageId from function parameter is from route, if it's 0, check POST
+            $voyageId = (int)($voyageId ?? $_POST['voyage_id'] ?? 0); // Use the parameter $voyageId first
+
+            if ($voyageId <= 0 || $uid <= 0) { // Re-add $uid check here
+                if (function_exists('flash')) {
+                    flash('danger', "Trajet introuvable : identifiant manquant.");
+                }
+                header('Location: ' . BASE_URL . '/profil?tab=voyages');
+                exit;
+            }
 
             $db->beginTransaction();
 

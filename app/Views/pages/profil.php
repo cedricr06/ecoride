@@ -294,6 +294,7 @@ include_once __DIR__ . '/../includes/header.php';
                                 action="<?= e(BASE_URL . '/profil/voyages/' . (int)$v['id'] . '/valider') ?>"
                                 class="m-0">
                                 <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
+                                <input type="hidden" name="voyage_id" value="<?= (int)$v['id'] ?>">
                                 <button class="btn btn-success btn-sm">Demarrer</button>
                               </form>
                         <?php
