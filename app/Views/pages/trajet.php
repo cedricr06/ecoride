@@ -282,10 +282,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             $pdo->commit();
             flash('success', 'Le trajet est arrivé à destination.');
+        }
 
     } catch (Throwable $e) {
         $pdo->rollBack();
-        flash('error', 'Erreur lors de l'action: ' . $e->getMessage());
+        flash('error', "Erreur lors de l'action: " . $e->getMessage());
     }
     header('Location: ' . url('trajet') . '?id=' . $id);
     exit;
