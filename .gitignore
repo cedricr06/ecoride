@@ -26,3 +26,7 @@
 # Systèmes
 .DS_Store
 Thumbs.db
+
+# Temporary migration scripts
+db_migration_*.php
+public/db_migration_*.php
