@@ -2,6 +2,17 @@
 require_login();
 global $db;
 
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['action']) && $_POST['action'] === 'trajet_participer') {
+    if (function_exists('trajet_participer')) {
+        $voyageId = (int)($_POST['id'] ?? 0);
+        $uid = (int)($_SESSION['user']['id'] ?? 0);
+        trajet_participer($db, $voyageId, $uid);
+        // Redirect back to the trip page
+        header('Location: ' . url('trajet') . '?id=' . $voyageId);
+        exit;
+    }
+}
+
 // --- Hook pour l'audit SELECT-only (BLOC 6)
 if (isset($_GET['audit']) && $_GET['audit'] === 'true') {
     if (function_exists('audit_ledger_consistency')) {

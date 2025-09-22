@@ -133,163 +133,8 @@ $placesTotal = 0;
 $placesRestantes = 0;
 
 
-
-
-// ---------------------------------------------------------------------
-// POST Participer
-// ---------------------------------------------------------------------
-$flash = function (string $type, string $msg) {
-  if (function_exists('flash')) {
-    flash($type, $msg);
-    return;
-  }
-  $_SESSION['__flash'][] = ['type' => $type, 'message' => $msg];
-};
-
-// Détection de la table de réservations/participants
-$detectTable = function (PDO $pdo, array $names): ?string {
-  foreach ($names as $name) {
-    try {
-      $st = $pdo->prepare('SHOW TABLES LIKE ?');
-      $st->execute([$name]);
-      if ($st->fetchColumn()) return $name;
-    } catch (Throwable $e) {
-      // ignore
-    }
-  }
-  return null;
-};
-
-$T_RES = 'participations';
-
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['action']) && $_POST['action'] === 'participer') {
-  if (function_exists('verify_csrf')) {
-    verify_csrf();
-  }
-
-  $userId = $_SESSION['user']['id'] ?? null; // adapte si ta session stocke différemment
-  if (empty($userId)) {
-    // Non connecté → redirection vers connexion avec redirect
-    $target = (function_exists('url') ? url('connexion') : '../connexion.php');
-    $cur = (function_exists('url') ? url('trajet') . '?id=' . $id : 'trajet.php?id=' . $id);
-    header('Location: ' . $target . '?redirect=' . urlencode($cur));
-    exit;
-  }
-
-  if ($T_RES === null) {
-    $flash('danger', "La fonctionnalité de réservation n'est pas configurée (table manquante). Contactez l'admin.");
-  } else {
-    // Récupère le trajet pour validations
-    $st = $pdo->prepare("SELECT id, chauffeur_id, places_disponibles FROM voyages WHERE id = :id LIMIT 1");
-    $st->execute([':id' => $id]);
-    $tripRow = $st->fetch(PDO::FETCH_ASSOC);
-    if (!$tripRow) {
-      $flash('danger', "Trajet introuvable.");
-    } else {
-      if ((int)$tripRow['chauffeur_id'] === (int)$userId) {
-        $flash('warning', "Vous ne pouvez pas réserver votre propre trajet.");
-      } else {
-        // Transaction simple : insérer une réservation + (optionnel) décrémenter places
-        try {
-          $pdo->beginTransaction();
-
-          // Empêche les surbookings si tu continues d’utiliser v.places_disponibles
-          $st2 = $pdo->prepare("SELECT places_disponibles FROM voyages WHERE id = :id FOR UPDATE");
-          $st2->execute([':id' => $id]);
-          $cur = $st2->fetchColumn();
-          if ($cur === false || (int)$cur <= 0) {
-            throw new RuntimeException('Plus de places disponibles.');
-          }
-
-          // Déjà inscrit ? (ignore les participations annulées)
-          $st3 = $pdo->prepare("SELECT 1 FROM {$T_RES} WHERE voyage_id = :v AND passager_id = :u AND statut IN ('en_attente','confirme') LIMIT 1");
-          $st3->execute([':v' => $id, ':u' => $userId]);
-          if ($st3->fetch()) {
-            throw new RuntimeException('Vous avez déjà une participation pour ce trajet.');
-          }
-
-          // Insert : inscrit_le a une valeur par défaut → pas besoin de le fournir
-          $st4 = $pdo->prepare("INSERT INTO {$T_RES} (voyage_id, passager_id, places, statut)
-                          VALUES (:v, :u, 1, 'en_attente')");
-          $st4->execute([':v' => $id, ':u' => $userId]);
-
-          // Si tu tiens à décrémenter v.places_disponibles tout de suite :
-          $st5 = $pdo->prepare("UPDATE voyages
-                          SET places_disponibles = places_disponibles - 1
-                          WHERE id = :id AND places_disponibles > 0");
-          $st5->execute([':id' => $id]);
-
-          $pdo->commit();
-          $flash('success', 'Votre demande de participation a été envoyée.');
-        } catch (Throwable $e) {
-          if ($pdo->inTransaction()) $pdo->rollBack();
-          // 1062 = doublon (UNIQUE (voyage_id, passager_id))
-          if (($e instanceof PDOException) && ($e->errorInfo[1] ?? null) == 1062) {
-            $flash('warning', "Vous êtes déjà inscrit sur ce trajet.");
-          } else {
-            $flash('danger', e($e->getMessage()));
-          }
-        }
-      }
-    }
-  }
-}
-
-
-// ---------------------------------------------------------------------
-// POST Annuler ma participation
-// ---------------------------------------------------------------------
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST'
-  && isset($_POST['action']) && $_POST['action'] === 'annuler'
-) {
-
-  if (function_exists('verify_csrf')) verify_csrf();
-
-  //  n’écrase pas $userId ici : on utilise celui calculé en haut
-  if (empty($userId)) {
-    $flash('danger', "Vous devez être connecté.");
-  } else {
-    try {
-      $pdo->beginTransaction();
-
-      // supprime UNE participation active pour ce voyage & cet utilisateur
-      $del = $pdo->prepare("
-        DELETE FROM {$T_RES}
-        WHERE voyage_id = :v AND passager_id = :u
-          AND statut IN ('en_attente','confirme')
-        LIMIT 1
-      ");
-      $del->execute([':v' => $id, ':u' => $userId]);
-
-      if ($del->rowCount() === 0) {
-        $pdo->rollBack();
-        $flash('warning', "Aucune participation active à annuler.");
-      } else {
-
-        $inc = $pdo->prepare("
-          UPDATE voyages
-          SET places_disponibles = places_disponibles + 1
-          WHERE id = :v
-        ");
-        $inc->execute([':v' => $id]);
-
-
-        $pdo->commit();
-        $flash('success', "Votre participation a été annulée.");
-        header('Location: ' . ((function_exists('url') ? url('trajet') : 'trajet.php') . '?id=' . $id));
-        exit;
-      }
-    } catch (Throwable $e) {
-      if ($pdo->inTransaction()) $pdo->rollBack();
-      $flash('danger', "Annulation impossible : " . e($e->getMessage()));
-    }
-  }
-}
-
-
 // ---------------------------------------------------------------------
 // Récupération des données du trajet
-// NOTE: Adapter les noms de tables/colonnes si votre schéma diffère
 // ---------------------------------------------------------------------
 $sqlTrip = "
   SELECT
@@ -539,13 +384,14 @@ include_once __DIR__ . '/../includes/header.php';
         <?php elseif (!$hasActiveParticipation): ?>
           <?php $tripId = (int)$trip['id']; ?>
           <form id="participer-form-<?= $tripId ?>"
+            action="<?= url('profil') ?>" 
             method="post"
             class="d-inline"
             data-trip-id="<?= $tripId ?>">
 
             <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
-            <input type="hidden" name="action" value="participer">
-            <input type="hidden" name="id" value="<?= $tripId ?>"> <!-- utile si ton handler relit $_POST['id'] -->
+            <input type="hidden" name="action" value="trajet_participer">
+            <input type="hidden" name="id" value="<?= $tripId ?>">
 
             <button type="button"
               class="btn btn-success"
@@ -557,29 +403,30 @@ include_once __DIR__ . '/../includes/header.php';
           </form>
 
           <!-- Modal de confirmation -->
-          <div class="modal fade"
-            id="confirmParticiper-<?= (int)$tripId ?>"
-            tabindex="-1"
-            aria-labelledby="confirmParticiperLabel-<?= (int)$tripId ?>"
-            aria-hidden="true"
-            data-trip-id="<?= (int)$tripId ?>">
-            ...
-            <button type="button" class="btn btn-primary js-confirm">Oui, je confirme</button>
-
+          <div class="modal fade" id="confirmParticiper-<?= (int)$tripId ?>" tabindex="-1" aria-labelledby="confirmParticiperLabel-<?= (int)$tripId ?>" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
               <div class="modal-content rounded-4">
-                <div class="modal-header">
-                  <h5 class="modal-title" id="confirmParticiperLabel-<?= $tripId ?>">Confirmer votre participation</h5>
-                  <button type="submit" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
-                </div>
-                <div class="modal-body">
-                  Voulez-vous vraiment participer à ce trajet ?
-                  <div class="small text-muted mt-2">Vous pourrez annuler selon les conditions prévues.</div>
-                </div>
-                <div class="modal-footer">
-                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Non</button>
-                  <button type="button" class="btn btn-primary js-confirm">Oui, je confirme</button>
-                </div>
+                <form action="<?= url('profil') ?>" method="post">
+                    <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
+                    <input type="hidden" name="action" value="trajet_participer">
+                    <input type="hidden" name="id" value="<?= $tripId ?>">
+                    <div class="modal-header">
+                      <h5 class="modal-title" id="confirmParticiperLabel-<?= $tripId ?>">Confirmer votre participation</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                    </div>
+                    <div class="modal-body">
+                      <p>Voulez-vous vraiment participer à ce trajet ?</p>
+                      <div class="mb-3">
+                          <label for="places-<?= $tripId ?>" class="form-label">Nombre de places à réserver :</label>
+                          <input type="number" name="places" id="places-<?= $tripId ?>" class="form-control" value="1" min="1" max="<?= $placesRestantes ?>" required>
+                      </div>
+                      <div class="small text-muted mt-2">Vous pourrez annuler selon les conditions prévues.</div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Non</button>
+                      <button type="submit" class="btn btn-primary">Oui, je confirme</button>
+                    </div>
+                </form>
               </div>
             </div>
           </div>
