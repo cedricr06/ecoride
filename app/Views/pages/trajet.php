@@ -131,6 +131,7 @@ $isDriver = false;
 $myParticipation = null;
 $placesTotal = 0;
 $placesRestantes = 0;
+$T_RES = 'participations';
 
 
 // ---------------------------------------------------------------------
