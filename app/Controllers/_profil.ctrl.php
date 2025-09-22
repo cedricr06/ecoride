@@ -12,7 +12,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['action']) 
         exit;
     }
 }
-... 
+
 // Passager : participer 
 if (!function_exists('participer')) {
     function participer(PDO $db, int $voyageId, int $uid): void
@@ -898,6 +898,38 @@ if (!function_exists('profile_voyage_accept')) {
             $checkArrived->closeCursor();
 
             if (!$hasStarted) {
+                // Idempotence : si une transaction driver_payout existe déjà pour ce voyage_id, ne paie pas à nouveau
+                $check_payout = $db->prepare("SELECT 1 FROM transactions WHERE voyage_id=:v AND reason='driver_payout' LIMIT 1");
+                $check_payout->execute([':v' => $voyageId]);
+                if (!$check_payout->fetchColumn()) {
+                    // Calcule le total encaissé et le nombre de participations actives
+                    $st_calc_payout = $db->prepare("SELECT COUNT(*) AS nb, COALESCE(SUM(COALESCE(p.prix, v.prix)), 0) AS paid FROM participations p JOIN voyages v ON v.id=:v WHERE p.voyage_id=:v AND p.statut IN ('en_attente','confirme')");
+                    $st_calc_payout->execute([':v' => $voyageId]);
+                    $payout_data = $st_calc_payout->fetch(PDO::FETCH_ASSOC);
+
+                    $nb_participations = (int)$payout_data['nb'];
+                    $total_paid = (int)$payout_data['paid'];
+
+                    $commission_site = 2 * $nb_participations;
+                    $driver_payout = max(0, $total_paid - $commission_site);
+
+                    if ($driver_payout > 0) {
+                        // Mouvements d’argent
+                        $db->prepare("UPDATE site_wallet SET balance = balance - :driver_payout WHERE id=1")->execute([':driver_payout' => $driver_payout]);
+                        $db->prepare("UPDATE utilisateurs SET credits = credits + :driver_payout WHERE id=:chauffeur_id")->execute([':driver_payout' => $driver_payout, ':chauffeur_id' => $uid]);
+
+                        // Journalise les écritures
+                        $db->prepare("INSERT INTO transactions (direction, reason, amount, user_id, voyage_id, created_at) VALUES ('debit', 'driver_payout', :driver_payout, NULL, :v, NOW())")->execute([':driver_payout' => $driver_payout, ':v' => $voyageId]);
+                        $db->prepare("INSERT INTO transactions (direction, reason, amount, user_id, voyage_id, created_at) VALUES ('credit', 'driver_payout', :driver_payout, :chauffeur_id, :v, NOW())")->execute([':driver_payout' => $driver_payout, ':chauffeur_id' => $uid, ':v' => $voyageId]);
+                    }
+                    if ($commission_site > 0) {
+                        $db->prepare("INSERT INTO transactions (direction, reason, amount, user_id, voyage_id, created_at) VALUES ('credit', 'site_commission', :commission_site, NULL, :v, NOW())")->execute([':commission_site' => $commission_site, ':v' => $voyageId]);
+                    }
+
+                    // Marque le versement effectué
+                    $db->prepare("UPDATE voyages SET payout_status='released', payout_released_at=NOW() WHERE id=:v")->execute([':v' => $voyageId]);
+                }
+
                 $insert = $db->prepare("INSERT INTO transactions(user_id, voyage_id, amount, direction, reason, created_at) VALUES(NULL,:vid,0,'credit','trip_started',NOW())");
                 $insert->execute([':vid' => $voyageId]);
                 $db->commit();
