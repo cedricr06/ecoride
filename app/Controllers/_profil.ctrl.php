@@ -760,64 +760,45 @@ if (!function_exists('trajet_participer')) {
             $chk->execute([':vid' => $voyageId, ':uid' => $uid]);
             if ($chk->fetchColumn()) throw new RuntimeException('Vous participez deja a ce trajet.');
 
-            // multi-places : on borne la quantite reservee
-            $requestedPlaces = isset($_POST['places']) ? (int)$_POST['places'] : 1;
-            if ($requestedPlaces < 1) $requestedPlaces = 1;
-
-            $available = null;
-            if (isset($voyage['places_disponibles'])) {
-                $available = (int)$voyage['places_disponibles'];
-                if ($available <= 0) {
-                    throw new RuntimeException('Plus de place disponible.');
-                }
-                if ($requestedPlaces > $available) {
-                    $requestedPlaces = $available;
-                }
+            // multi-places
+            $places = isset($_POST['places']) ? (int)$_POST['places'] : 1;
+            if ($places < 1) {
+                $places = 1;
             }
-            if ($requestedPlaces < 1) throw new RuntimeException('Plus de place disponible.');
 
-            $unitPrice = (int)($voyage['prix'] ?? 0);
-            if ($unitPrice < 0) $unitPrice = 0;
-            $totalCost = $unitPrice * $requestedPlaces;
-            if ($totalCost <= 0) throw new RuntimeException('Montant invalide.');
+            $places_disponibles = (int)($voyage['places_disponibles'] ?? 0);
+            if ($places > $places_disponibles) {
+                throw new RuntimeException('Nombre de places demandé supérieur au nombre de places disponibles.');
+            }
+
+            $prix_unitaire = (int)($voyage['prix'] ?? 0);
+            $total = $prix_unitaire * $places;
+            if ($total <= 0) throw new RuntimeException('Montant invalide.');
 
             // Lock credits user
             $u = $db->prepare("SELECT credits FROM utilisateurs WHERE id=:u FOR UPDATE");
             $u->execute([':u' => $uid]);
             $credits = (int)$u->fetchColumn();
-            if ($credits < $totalCost) throw new RuntimeException('Credits insuffisants.');
+            if ($credits < $total) throw new RuntimeException('Credits insuffisants.');
 
-            // Debit passager
-            $db->prepare("UPDATE utilisateurs SET credits = credits - :a WHERE id=:u")
-                ->execute([':a' => $totalCost, ':u' => $uid]);
+            // Mouvements
+            $db->prepare("UPDATE utilisateurs SET credits = credits - :total WHERE id=:u")
+                ->execute([':total' => $total, ':u' => $uid]);
 
-            // Credit ESCROW (wallet site)
-            $db->prepare("UPDATE site_wallet SET balance = balance + :a WHERE id=1")
-                ->execute([':a' => $totalCost]);
+            $db->prepare("UPDATE site_wallet SET balance = balance + :total WHERE id=1")
+                ->execute([':total' => $total]);
 
-            // Journaux de paiement
-            $db->prepare("INSERT INTO transactions(user_id, voyage_id, amount, direction, reason)
-                      VALUES(:u,:vid,:a,'debit','participation_pay')")
-                ->execute([':u' => $uid, ':vid' => $voyageId, ':a' => $totalCost]);
-            $db->prepare("INSERT INTO transactions(user_id, voyage_id, amount, direction, reason)
-                      VALUES(NULL,:vid,:a,'credit','participation_pay')")
-                ->execute([':vid' => $voyageId, ':a' => $totalCost]);
+            $db->prepare("INSERT INTO transactions (direction, reason, amount, user_id, voyage_id) VALUES ('debit', 'participation_pay', :total, :u, :v)")
+                ->execute([':total' => $total, ':u' => $uid, ':v' => $voyageId]);
 
-            // Enregistrer la participation avec le prix unitaire
-            $db->prepare("INSERT INTO participations(voyage_id, passager_id, places, prix, statut)
-                      VALUES(:vid, :uid, :places, :prix, 'confirme')")
-                ->execute([':vid' => $voyageId, ':uid' => $uid, ':places' => $requestedPlaces, ':prix' => $unitPrice]);
+            $db->prepare("INSERT INTO transactions (direction, reason, amount, user_id, voyage_id) VALUES ('credit', 'participation_pay', :total, NULL, :v)")
+                ->execute([':total' => $total, ':v' => $voyageId]);
 
-            if ($available !== null) {
-                $db->prepare("UPDATE voyages
-                            SET places_disponibles = GREATEST(0, places_disponibles - :p),
-                                payout_status='pending'
-                            WHERE id=:vid")
-                    ->execute([':p' => $requestedPlaces, ':vid' => $voyageId]);
-            } else {
-                $db->prepare("UPDATE voyages SET payout_status='pending' WHERE id=:vid")
-                    ->execute([':vid' => $voyageId]);
-            }
+            $db->prepare("INSERT INTO participations (voyage_id, passager_id, places, prix, statut, inscrit_le) VALUES (:v, :u, :places, :prix, 'confirme', NOW())")
+                ->execute([':v' => $voyageId, ':u' => $uid, ':places' => $places, ':prix' => $prix_unitaire]);
+
+            $db->prepare("UPDATE voyages SET places_disponibles = places_disponibles - :places, payout_status='pending' WHERE id=:v")
+                ->execute([':places' => $places, ':v' => $voyageId]);
 
             $db->commit();
             if (function_exists('flash')) flash('success', 'Participation payee et confirmee.');
