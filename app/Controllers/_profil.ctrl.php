@@ -855,72 +855,59 @@ if (!function_exists('profile_voyage_accept')) {
 
             $db->beginTransaction();
 
-            // Lock & checks
-            $st = $db->prepare("SELECT id, chauffeur_id, prix, statut, date_depart
-                            FROM voyages WHERE id=:id FOR UPDATE");
+            $st = $db->prepare("SELECT id, chauffeur_id FROM voyages WHERE id=:id FOR UPDATE");
             $st->execute([':id' => $voyageId]);
-            $v = $st->fetch(PDO::FETCH_ASSOC);
-            if (!$v) throw new RuntimeException("Voyage introuvable.");
-            if ((int)$v['chauffeur_id'] !== (int)$uid) throw new RuntimeException("Accès refusé.");
-            if (($v['statut'] ?? '') === 'annule') throw new RuntimeException("Trajet annulé.");
-
-            // Anti double paiement
-            $already = $db->prepare("SELECT COUNT(*) FROM transactions
-                                 WHERE voyage_id=:vid AND reason='driver_payout'");
-            $already->execute([':vid' => $voyageId]);
-            if ((int)$already->fetchColumn() > 0) throw new RuntimeException("Trajet déjà validé.");
-
-            // Places actives
-            $ps = $db->prepare("SELECT COALESCE(SUM(COALESCE(places,1)),0)
-                            FROM participations
-                            WHERE voyage_id=:vid AND statut IN ('en_attente','confirme')");
-            $ps->execute([':vid' => $voyageId]);
-            $totalPlaces = (int)($ps->fetchColumn() ?: 0);
-            if ($totalPlaces <= 0) throw new RuntimeException("Aucun participant actif.");
-
-            $prix         = (int)$v['prix'];
-            $commission   = 2 * $totalPlaces;               // côté site
-            $driverPayout = max(0, ($prix - 2)) * $totalPlaces;
-
-            // Vérifie l’escrow
-            $ws = $db->query("SELECT balance FROM site_wallet WHERE id=1 FOR UPDATE");
-            $site = $ws->fetch(PDO::FETCH_ASSOC);
-            if ((int)$site['balance'] < $driverPayout) {
-                throw new RuntimeException("Solde site insuffisant.");
+            $voyage = $st->fetch(PDO::FETCH_ASSOC);
+            if (!$voyage || (int)$voyage['chauffeur_id'] !== (int)$uid) {
+                $db->rollBack();
+                if (function_exists('flash')) flash('danger', 'Trajet introuvable ou acces refuse.');
+                return;
             }
 
-            // Verser chauffeur + débiter wallet
-            $db->prepare("UPDATE utilisateurs SET credits = credits + :a WHERE id=:u")
-                ->execute([':a' => $driverPayout, ':u' => $uid]);
-            $db->prepare("UPDATE site_wallet SET balance = balance - :a WHERE id=1")
-                ->execute([':a' => $driverPayout]);
+            $checkStarted = $db->prepare("SELECT 1 FROM transactions WHERE voyage_id=:vid AND reason='trip_started' LIMIT 1");
+            $checkStarted->execute([':vid' => $voyageId]);
+            $hasStarted = (bool)$checkStarted->fetchColumn();
+            $checkStarted->closeCursor();
 
-            // Journaux
-            $db->prepare("INSERT INTO transactions(user_id, voyage_id, amount, direction, reason)
-                      VALUES(:u,:vid,:a,'credit','driver_payout')")
-                ->execute([':u' => $uid, ':vid' => $voyageId, ':a' => $driverPayout]);
-            $db->prepare("INSERT INTO transactions(user_id, voyage_id, amount, direction, reason)
-                      VALUES(NULL,:vid,:a,'debit','driver_payout')")
-                ->execute([':vid' => $voyageId, ':a' => $driverPayout]);
-            $db->prepare("INSERT INTO transactions(user_id, voyage_id, amount, direction, reason)
-                      VALUES(NULL,:vid,:a,'credit','site_commission')")
-                ->execute([':vid' => $voyageId, ':a' => $commission]);
+            $checkArrived = $db->prepare("SELECT 1 FROM transactions WHERE voyage_id=:vid AND reason='trip_arrived' LIMIT 1");
+            $checkArrived->execute([':vid' => $voyageId]);
+            $hasArrived = (bool)$checkArrived->fetchColumn();
+            $checkArrived->closeCursor();
 
-            // Marquer terminé (tu peux laisser juste 'valide' si tu ne gères pas payout_status)
-            $db->prepare("UPDATE voyages SET statut='valide' WHERE id=:vid")
-                ->execute([':vid' => $voyageId]);
+            if (!$hasStarted) {
+                $insert = $db->prepare("INSERT INTO transactions(user_id, voyage_id, amount, direction, reason, created_at) VALUES(NULL,:vid,0,'credit','trip_started',NOW())");
+                $insert->execute([':vid' => $voyageId]);
+                $db->commit();
+                if (function_exists('flash')) flash('success', 'Trajet demarre.');
+                return;
+            }
 
-            // Clore les participations actives
-            $db->prepare("UPDATE participations SET statut='valide'
-                      WHERE voyage_id=:vid AND statut IN ('en_attente','confirme')")
-                ->execute([':vid' => $voyageId]);
+            if (!$hasArrived) {
+                $insert = $db->prepare("INSERT INTO transactions(user_id, voyage_id, amount, direction, reason, created_at) VALUES(NULL,:vid,0,'credit','trip_arrived',NOW())");
+                $insert->execute([':vid' => $voyageId]);
 
-            $db->commit();
-            if (function_exists('flash')) flash('success', "Trajet validé : paiement versé au chauffeur.");
+                $db->prepare("UPDATE voyages SET statut='valide' WHERE id=:vid")
+                    ->execute([':vid' => $voyageId]);
+
+                $db->commit();
+                queueRideValidationInvites($voyageId);
+                if (function_exists('flash')) flash('success', 'Arrivee enregistree.');
+                return;
+            }
+
+            $db->rollBack();
+            if (function_exists('flash')) flash('info', 'Trajet deja finalise.');
         } catch (Throwable $e) {
             if ($db->inTransaction()) $db->rollBack();
-            if (function_exists('flash')) flash('danger', "Validation impossible : " . $e->getMessage());
+            if (function_exists('flash')) flash('danger', $e->getMessage());
         }
+    }
+}
+
+if (!function_exists('queueRideValidationInvites')) {
+    function queueRideValidationInvites(int $voyageId): void
+    {
+        // TODO: send notifications when trip arrives (placeholder)
     }
 }
 
