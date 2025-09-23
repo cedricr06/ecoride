@@ -5,6 +5,14 @@
 define('BASE_PATH', dirname(__DIR__));            // racine projet
 define('BASE_URL', '/Projet_ecoride/public');     // préfixe URL publique (adapter si besoin)
 
+require_once BASE_PATH . '/vendor/autoload.php';
+
+// Charge .env si présent (utilisé par Mailer)
+if (class_exists(\Dotenv\Dotenv::class)) {
+    $dotenv = \Dotenv\Dotenv::createMutable(BASE_PATH);
+    $dotenv->safeLoad(); // ne plante pas si variable absente
+}
+
 require_once BASE_PATH . '/app/core/bootstrap.php';
 require_once BASE_PATH . '/app/core/security.php';
 require_once BASE_PATH . '/app/core/validation.php';
@@ -117,8 +125,8 @@ if ($method === 'POST' && preg_match('#^/profil/voyages/(\d+)/valider$#', $path,
     forbid_admin();
     require BASE_PATH . '/app/Controllers/_profil.ctrl.php';
     if (function_exists('verify_csrf')) verify_csrf();
-    profile_voyage_accept($db, (int)$m[1], $_SESSION['user']['id'] ?? 0);
-    header('Location: ' . BASE_URL . '/profil?v=done#tab-voyages'); // retour historique (ou /profil)
+    handle_trip_arrival($db, (int)$m[1], (int)($_SESSION['user']['id'] ?? 0));
+    header('Location: ' . BASE_URL . '/profil');
     exit;
 }
 
@@ -286,6 +294,11 @@ if ($method === 'POST' && $path === '/admin/utilisateurs/supprimer') {
     require_once BASE_PATH . '/app/Controllers/_admin.ctrl.php';
     admin_delete_user($db, $_POST);
     exit;
+}
+
+if ($method==='GET' && preg_match('#^/avis/([A-Za-z0-9_-]+)$#',$path,$m)) {
+    require BASE_PATH.'/app/Controllers/_avis.ctrl.php';
+    avis_show($db, $m[1]); exit;
 }
 
 // ------------------------------

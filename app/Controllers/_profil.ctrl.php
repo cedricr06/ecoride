@@ -13,6 +13,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['action']) 
     }
 }
 
+if (!function_exists('app_log')) {
+    function app_log(string $msg): void
+    {
+        // écris dans le log PHP standard avec timestamp
+        error_log(date('c') . ' ' . $msg);
+    }
+}
+
 // Passager : participer 
 if (!function_exists('participer')) {
     function participer(PDO $db, int $voyageId, int $uid): void
@@ -29,7 +37,7 @@ if (!function_exists('participer')) {
 
             if (!$voyage) throw new RuntimeException('Trajet introuvable.');
             if (($voyage['statut'] ?? '') === 'annule') throw new RuntimeException('Trajet annulé.');
-            
+
             // Force places = 1
             $places = 1;
 
@@ -706,7 +714,7 @@ function passenger_cancel_participation(PDO $db, array $participation, int $uid)
             // Journaliser la commission
             $db->prepare("INSERT INTO transactions (user_id, voyage_id, amount, direction, reason) VALUES (NULL, :vid, :amount, 'credit', 'site_commission')")->execute([':vid' => $participation['voyage_id'], ':amount' => $commission]);
         }
-        
+
         // Le montant total payé (refund + commission) est déduit du wallet du site (escrow)
         $db->prepare("UPDATE site_wallet SET balance = balance - :amount WHERE id = 1")->execute([':amount' => $total_paid]);
 
@@ -718,7 +726,6 @@ function passenger_cancel_participation(PDO $db, array $participation, int $uid)
 
         $db->commit();
         if (function_exists('flash')) flash('success', 'Votre participation a été annulée.');
-
     } catch (Throwable $e) {
         if ($db->inTransaction()) $db->rollBack();
         if (function_exists('flash')) flash('danger', "Erreur technique lors de l'annulation: " . $e->getMessage());
@@ -763,7 +770,7 @@ function driver_cancel_voyage(PDO $db, array $voyage, int $uid): void
                 $db->prepare("UPDATE utilisateurs SET credits = credits + :amount WHERE id = :uid")->execute([':amount' => $refund_amount, ':uid' => $passenger_id]);
                 // Journaliser
                 $db->prepare("INSERT INTO transactions (user_id, voyage_id, amount, direction, reason) VALUES (:uid, :vid, :amount, 'credit', 'refund_driver_cancel')")->execute([':uid' => $passenger_id, ':vid' => $voyage['id'], ':amount' => $refund_amount]);
-                
+
                 $total_refunded += $refund_amount;
             }
             // Mettre à jour la participation
@@ -780,7 +787,6 @@ function driver_cancel_voyage(PDO $db, array $voyage, int $uid): void
 
         $db->commit();
         if (function_exists('flash')) flash('success', 'Trajet annulé. Tous les passagers ont été remboursés.');
-
     } catch (Throwable $e) {
         if ($db->inTransaction()) $db->rollBack();
         if (function_exists('flash')) flash('danger', "Erreur technique lors de l'annulation du trajet: " . $e->getMessage());
@@ -961,6 +967,66 @@ if (!function_exists('profile_voyage_accept')) {
 
                 $db->prepare("UPDATE voyages SET statut='valide' WHERE id=:vid")
                     ->execute([':vid' => $voyageId]);
+
+                // --- Envoie mail pour avis au passager --
+                $st_voyage_details = $db->prepare("
+                    SELECT
+                        v.id, v.chauffeur_id, v.ville_depart, v.ville_arrivee, v.date_depart,
+                        u_driver.prenom AS driver_prenom, u_driver.nom AS driver_nom, u_driver.pseudo AS driver_pseudo
+                    FROM voyages v
+                    JOIN utilisateurs u_driver ON u_driver.id = v.chauffeur_id
+                    WHERE v.id = :vid
+                ");
+                $st_voyage_details->execute([':vid' => $voyageId]);
+                $voyageDetails = $st_voyage_details->fetch(PDO::FETCH_ASSOC);
+
+                $st_passengers = $db->prepare("
+                    SELECT
+                        p.passager_id,
+                        u_rider.email AS rider_email,
+                        u_rider.prenom AS rider_prenom,
+                        u_rider.nom AS rider_nom,
+                        u_rider.pseudo AS rider_pseudo
+                    FROM participations p
+                    JOIN utilisateurs u_rider ON u_rider.id = p.passager_id
+                    WHERE p.voyage_id = :vid AND p.statut = 'confirme'
+                ");
+                $st_passengers->execute([':vid' => $voyageId]);
+                $activePassengers = $st_passengers->fetchAll(PDO::FETCH_ASSOC);
+
+                if ($voyageDetails && !empty($activePassengers)) {
+                    require_once __DIR__ . '/../Services/Mailer.php';
+                    require_once __DIR__ . '/../Services/ReviewToken.php';
+                    $mailer = new \App\Services\Mailer();
+
+                    error_log("[arrivee] open voyageId={$voyageId} passengers=" . count($activePassengers));
+
+                    foreach ($activePassengers as $p) {
+                        try {
+                            $expiresAt = new DateTime('+14 days');
+                            $token = \App\Services\ReviewToken::create(
+                                $db,
+                                (int)$voyageDetails['id'],
+                                (int)$voyageDetails['chauffeur_id'],
+                                (int)$p['passager_id'],
+                                $expiresAt
+                            );
+
+                            $link = BASE_URL . "/avis/{$token}";
+                            $html = "<p>Merci pour votre trajet.</p>
+             <p>Laissez votre avis : <a href='{$link}'>{$link}</a></p>";
+
+                            if ($mailer->send($p['rider_email'], "Votre avis sur le trajet #{$voyageId}", $html)) {
+                                error_log("[mail] to={$p['rider_email']} sent=1");
+                            } else {
+                                error_log("[mail] to={$p['rider_email']} sent=0");
+                            }
+                        } catch (Throwable $e) {
+                            error_log("Failed to send review email for voyage {$voyageDetails['id']} to {$p['rider_email']}: " . $e->getMessage());
+                        }
+                    }
+                }
+                // --- END NEW ---
 
                 $db->commit();
                 queueRideValidationInvites($voyageId);
@@ -1143,9 +1209,9 @@ function profile_list_my_voyages(PDO $db, int $uid, string $view = 'upcoming'): 
     $st->execute([':u' => $uid]);
     $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
     foreach ($rows as &$r) {
-      $r['eco'] = (bool)$r['eco'];
-      $r['has_started'] = !empty($r['has_started']);
-      $r['has_arrived'] = !empty($r['has_arrived']);
+        $r['eco'] = (bool)$r['eco'];
+        $r['has_started'] = !empty($r['has_started']);
+        $r['has_arrived'] = !empty($r['has_arrived']);
     }
     return $rows;
 }
@@ -1194,4 +1260,134 @@ function audit_ledger_consistency(PDO $db): array
         'user_deltas' => $user_deltas,
         'trip_synthesis' => $trip_synthesis,
     ];
+}
+
+if (!function_exists('send_review_invites')) {
+    function send_review_invites(PDO $db, int $voyageId): void
+    {
+        app_log("[avis] arrivee: voyageId={$voyageId}");
+
+        // 1) Données trajet + passagers confirmés
+        $st_voyage = $db->prepare("
+        SELECT v.id, v.chauffeur_id, v.ville_depart, v.ville_arrivee, v.date_depart,
+               u.prenom AS driver_prenom, u.nom AS driver_nom, u.pseudo AS driver_pseudo
+        FROM voyages v
+        JOIN utilisateurs u ON u.id = v.chauffeur_id
+        WHERE v.id = :vid
+    ");
+        $st_voyage->execute([':vid' => $voyageId]);
+        $voyage = $st_voyage->fetch(PDO::FETCH_ASSOC);
+
+        $st_pass = $db->prepare("
+        SELECT p.passager_id,
+               u.email   AS rider_email,
+               u.prenom  AS rider_prenom,
+               u.nom     AS rider_nom,
+               u.pseudo  AS rider_pseudo
+        FROM participations p
+        JOIN utilisateurs u ON u.id = p.passager_id
+        WHERE p.voyage_id = :vid AND p.statut = 'confirme'
+    ");
+        $st_pass->execute([':vid' => $voyageId]);
+        $passagers = $st_pass->fetchAll(PDO::FETCH_ASSOC);
+
+        app_log("[avis] voyage=" . json_encode($voyage ?: null));
+        app_log("[avis] passagersCount=" . (is_array($passagers) ? count($passagers) : 0));
+
+        if (!$voyage || empty($passagers)) {
+            app_log("[avis][STOP] pas de voyage ou aucun passager actif");
+            return;
+        }
+
+        // 2) Prépare contexte commun
+        $mailer = new \App\Services\Mailer();
+
+        $driverName = trim(($voyage['driver_prenom'] ?? '') . ' ' . ($voyage['driver_nom'] ?? ''));
+        if ($driverName === '') $driverName = $voyage['driver_pseudo'] ?? 'un conducteur';
+
+        try {
+            $dt = new \DateTime($voyage['date_depart']);
+            $tripLabel = $voyage['ville_depart'] . ' → ' . $voyage['ville_arrivee'] . ' (' . $dt->format('d/m H:i') . ')';
+        } catch (\Throwable $e) {
+            $tripLabel = $voyage['ville_depart'] . ' → ' . $voyage['ville_arrivee'];
+        }
+
+        // ✅ Déclare une seule fois l'expiration
+        $expiresAt    = new \DateTime('+14 days');      // objet utile pour affichage
+        
+
+        // 3) Boucle d’envoi
+        foreach ($passagers as $p) {
+            app_log("[avis] envoi rider={$p['passager_id']} email={$p['rider_email']}");
+
+            try {
+                $token = \App\Services\ReviewToken::create(
+                    $db,
+                    (int)$voyage['id'],
+                    (int)$voyage['chauffeur_id'],
+                    (int)$p['passager_id'],   // <- sans espace
+                    $expiresAt                // <- on passe l'objet, pas une string
+                );
+                if (!$token) {
+                    app_log("[avis][WARN] token non créé (rider={$p['passager_id']})");
+                    continue;
+                }
+                app_log("[avis] token={$token}");
+
+                // Lien vers la page d’avis (route typique /avis/{token})
+                $reviewUrl = BASE_URL . '/avis/' . urlencode($token);
+
+                $riderName = trim(($p['rider_prenom'] ?? '') . ' ' . ($p['rider_nom'] ?? ''));
+                if ($riderName === '') $riderName = $p['rider_pseudo'] ?? 'passager';
+
+                // Envoi de l'email (HTML simple)
+                $ok = $mailer->sendReviewEmail($p['rider_email'], [
+                    'rider_name'  => $riderName,
+                    'driver_name' => $driverName,
+                    'trip_label'  => $tripLabel,
+                    'review_url'  => $reviewUrl,
+                    'expires_at'  => $expiresAt->format('d/m/Y'),
+                ]);
+
+                if (!$ok) app_log("[avis][mail][FAIL] {$p['rider_email']}");
+            } catch (\Throwable $e) {
+                app_log("[avis][ERR] " . $e->getMessage());
+            }
+        }
+    }
+}
+
+if (!function_exists('handle_trip_arrival')) {
+    function handle_trip_arrival(PDO $db, int $voyageId, int $uid)
+    {
+        $db->beginTransaction();
+        try {
+            $st = $db->prepare("SELECT id, chauffeur_id, statut FROM voyages WHERE id=:id FOR UPDATE");
+            $st->execute([':id' => $voyageId]);
+            $voyage = $st->fetch(PDO::FETCH_ASSOC);
+
+            if (!$voyage || (int)$voyage['chauffeur_id'] !== $uid) {
+                throw new RuntimeException('Trajet introuvable ou accès refusé.');
+            }
+            if ($voyage['statut'] === 'valide' || $voyage['statut'] === 'annule') {
+                app_log("[avis][WARN] Trajet {$voyageId} déjà finalisé ou annulé. Statut: {$voyage['statut']}");
+                $db->rollBack();
+                return; // Idempotence
+            }
+
+            // Mettre à jour le statut du voyage
+            $db->prepare("UPDATE voyages SET statut='valide' WHERE id=:vid")->execute([':vid' => $voyageId]);
+            app_log("[trajet] statut=valide pour voyageId={$voyageId}");
+
+            // Envoyer les invitations pour avis
+            send_review_invites($db, $voyageId);
+
+            $db->commit();
+            if (function_exists('flash')) flash('success', 'Trajet clôturé, les invitations pour avis ont été envoyées.');
+        } catch (Throwable $e) {
+            if ($db->inTransaction()) $db->rollBack();
+            app_log("[avis][ERROR] " . $e->getMessage());
+            if (function_exists('flash')) flash('danger', $e->getMessage());
+        }
+    }
 }

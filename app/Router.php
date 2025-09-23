@@ -27,6 +27,44 @@ class Router
         $uri = $_GET['url'] ?? '';
         $uri = trim($uri, '/');
 
+        // Handle dynamic /avis/{token} route
+        if (preg_match('/^avis\/([a-f0-9]{64})$/', $uri, $matches)) {
+            $token = $matches[1];
+            // Expose global variables for the controller
+            if (isset($GLOBALS['db']))       { $db = $GLOBALS['db']; }
+            if (isset($GLOBALS['authUser'])) { $authUser = $GLOBALS['authUser']; }
+            require_once BASE_PATH . '/app/Controllers/ReviewsController.php';
+            $controller = new \App\Controllers\ReviewsController();
+            if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+                $controller->submit($token);
+            } else {
+                $controller->showForm($token);
+            }
+            return;
+        }
+
+// Handle POST /profil/voyages/{id}/valider
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST'
+    && preg_match('/^profil\/voyages\/(\d+)\/valider$/', $uri, $m)) {
+
+    $voyageId = (int)$m[1];
+
+    // Récup contexte si exposé en global
+    if (isset($GLOBALS['db']))       { $db = $GLOBALS['db']; }
+    if (isset($GLOBALS['authUser'])) { $authUser = $GLOBALS['authUser']; }
+    $uid = (int)($authUser['id'] ?? 0);
+
+    require_once BASE_PATH . '/app/Controllers/_profil.ctrl.php';
+    if (function_exists('verify_csrf')) verify_csrf();
+
+    // Déclenche la machine à états (démarrer/arrivee). En cas d'arrivée,
+    // profile_voyage_accept crée les tokens et envoie les emails via App\Services\Mailer
+    profile_voyage_accept($db, $voyageId, $uid);
+
+    header('Location: ' . url('profil'));
+    return;
+}
+
         if (!array_key_exists($uri, $this->routes)) {
             $this->handleNotFound();
             return;

@@ -278,35 +278,46 @@ include_once __DIR__ . '/../includes/header.php';
                         $statut = $v['statut'] ?? '';
                         $hasStarted = !empty($v['has_started'] ?? false);
                         $hasArrived = !empty($v['has_arrived'] ?? false);
-                        if ($hasArrived || $statut === 'valide') {
+
+                        // Si le trajet est terminé (arrivé ou statut 'valide')
+                        if ($statut === 'annule') {
                         ?>
-                          <span class="badge bg-success-subtle text-success">Effectuer</span>
+                          <span class="badge bg-danger-subtle text-danger">Annulé</span>
+
                         <?php
-                        } elseif ($statut === 'annule') {
-                          // Trajet annuler
+                        // Si le trajet est terminé (arrivé ou statut 'valide')
+                        } elseif ($hasArrived || $statut === 'valide') {
                         ?>
-                          <span class="badge bg-danger-subtle text-danger">Annuler</span>
+                          <span class="badge bg-success-subtle text-success">Terminé</span>
+
                         <?php
+                        // Si le trajet a démarré mais pas encore terminé
+                        } elseif ($hasStarted) {
+                        ?>
+                          <span class="badge bg-warning-subtle text-warning">En cours</span>
+
+                        <?php
+                        // Sinon, le trajet n'a pas encore démarré
                         } else {
-                            if (!$hasStarted) {
                         ?>
-                              <span class="badge bg-warning-subtle text-warning">À démarrer</span>
+                          <span class="badge bg-warning-subtle text-warning">À démarrer</span>
                         <?php
-                            } else {
-                        ?>
-                              <span class="badge bg-info-subtle text-info">En cours</span>
-                        <?php
-                            }
                         }
                         ?>
+                          
 
-                        <form method="post"
-                          action="<?= e(BASE_URL . '/profil/voyages/' . (int)$v['id'] . '/annuler') ?>"
-                          onsubmit="return confirm('Annuler ce trajet ?');"
-                          class="m-0">
-                          <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
-                          <button class="btn btn-outline-danger btn-sm">Annuler</button>
-                        </form>
+                          <?php if (!$hasStarted): // N'afficher "Annuler" que si le trajet n'a pas démarré ?>
+                          <form method="post"
+                                action="<?= e(BASE_URL . '/profil/voyages/' . (int)$v['id'] . '/annuler') ?>"
+                                onsubmit="return confirm('Annuler ce trajet ?');"
+                                class="m-0">
+                            <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
+                            <button class="btn btn-outline-danger btn-sm">Annuler</button>
+                          </form>
+                          <?php endif; ?>
+                        <?php
+        
+                        ?>
                       </div>
                     </div>
                   <?php endforeach; ?>

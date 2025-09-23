@@ -23,4 +23,8 @@ Options -Indexes
 RewriteRule ^assets/.*\.(?:php|phtml|php[0-9])$ - [F,L]
 RewriteRule ^uploads/.*\.(?:php|phtml|php[0-9])$ - [F,L]
 
+<IfModule mod_headers.c>
+Header set X-Ecoride "on"
+</IfModule>
+
 SetEnv MONGO_URI "mongodb+srv://cedricr06_db_user:PlSV8eHPyWmT58Yr@ecoride.vv1mgkr.mongodb.net/?retryWrites=true&w=majority&appName=ecoride"
