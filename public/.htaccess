@@ -1,17 +1,14 @@
-# /public/.htaccess
 RewriteEngine On
-
-# Si le site est dans un sous-dossier, décommentez et ajustez la ligne suivante.
-# Ex: /Projet_ecoride/public
+Options -MultiViews
 RewriteBase /Projet_ecoride/public/
 
-# Laisse passer les fichiers/répertoires réels
+# Fichiers/dossiers réels -> pas de réécriture
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# Page d'accueil
-RewriteRule ^$ index.php [QSA,L]
+# Accueil
+RewriteRule ^$ index.php [L]
 
 # Tout le reste -> index.php?url=...
 RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]
