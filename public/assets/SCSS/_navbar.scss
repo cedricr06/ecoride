@@ -1,0 +1,264 @@
+@use "sass:color";
+@use "variables";
+
+/* Base */
+.navbar {
+  background: #fff;
+  overflow: visible; /* évite tout clipping */
+
+  .nav-link::after {
+    content: none !important; /* neutralise d’éventuels ::after */
+  }
+
+  .nav-item {
+    .nav-link {
+      color: #333;
+      margin: 0 10px;
+
+      &:hover {
+        color: variables.$vert;
+      }
+    }
+  }
+
+  .btn {
+    border-radius: 9px;
+    font-weight: 600;
+    padding: 6px 14px;
+
+    &:hover {
+      background: color.scale(variables.$vert, $lightness: -10%);
+    }
+  }
+
+  .account-area {
+    display: flex !important;
+    align-items: center;
+    gap: 0.6rem;
+    margin-left: auto;
+    min-width: 0;
+    position: relative;
+    z-index: 1;
+    flex-wrap: wrap; /* évite les débords sur très petites largeurs */
+
+    .welcome {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      max-width: clamp(120px, 28vw, 260px);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+}
+.dropdown-menu {
+    width: 200px !important;
+  }
+
+.navbar-text {
+  color: #333;
+  font-style: italic;
+}
+
+.barre-menu {
+  background: variables.$vert;
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+/* Crédits pill */
+.bg-credits {
+  background: #eaf7ef;
+  color: variables.$vert;
+  border: 1px solid rgba(variables.$vert, 0.25);
+  font-weight: 700;
+}
+
+/* Avatar */
+.user-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid variables.$vert;
+  color: variables.$vert;
+  background: #fff;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  line-height: 1;
+  transition: transform 0.12s ease, background-color 0.12s ease;
+
+  &:hover {
+    background: #f6fff9;
+    transform: translateY(-1px);
+  }
+
+  &.show {
+    background: #f0fff4;
+  }
+}
+
+/* Desktop (>=992px) */
+@media (min-width: 992px) {
+  .navbar {
+    .collapse {
+      min-width: 0; /* au cas où tu utilises collapse ailleurs */
+    }
+
+    .navbar-nav {
+      flex: 1 1 auto;
+      min-width: 0;
+      gap: 0.75rem;
+    }
+
+    .container-fluid {
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-link {
+      white-space: nowrap;
+      padding: 0.5rem 0.75rem;
+    }
+
+    .navbar-brand {
+      order: 1;
+    }
+
+    .offcanvas-lg {
+      order: 2;
+      flex: 1 1 auto;
+
+      .navbar-nav {
+        justify-content: flex-start;
+      }
+    }
+
+    .account-area {
+      order: 3;
+      margin-left: 0; /* enlève ms-auto */
+      justify-content: flex-end;
+    }
+
+    .navbar-toggler {
+      order: 4;
+    }
+  }
+}
+
+/* Mobile / Tablette (<992px) */
+@media (max-width: 991.98px) {
+  .navbar {
+    .container-fluid {
+      display: flex;
+      align-items: center;
+    }
+
+    .account-area {
+      order: 2;
+    }
+
+    .navbar-toggler {
+      order: 3;
+      margin-left: 0.5rem;
+    }
+  }
+  
+
+  .offcanvas {
+    width: 260px !important;
+    max-height: 260px !important;
+    border-radius: 0 0 6px 6px;
+
+    .navbar-nav {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.25rem;
+    }
+
+    .nav-item {
+      width: 100%;
+    }
+
+    .nav-link {
+      display: block;
+      padding: 0.75rem 0;
+    }
+
+    .btn {
+      width: 100%;
+    }
+
+    .btn-close {
+      filter: invert(1) grayscale(100%) brightness(200%);
+      opacity: 1;
+    }
+  }
+}
+
+/* Petites largeurs */
+@media (max-width: 575.98px) {
+  .navbar {
+    .account-area {
+      gap: 0.45rem;
+
+      .welcome {
+        max-width: 42vw;
+      }
+
+      .bg-credits {
+        transform: scale(0.95);
+      }
+
+      .user-toggle {
+        width: 32px;
+        height: 32px;
+      }
+    }
+
+    .navbar-toggler {
+      padding: 0.25rem 0.35rem; /* réduit la zone cliquable */
+      font-size: 0.8rem; /* réduit l’icône générée */
+      width: 32px; /* même taille que ton avatar */
+      height: 32px;
+    }
+
+    .navbar-toggler-icon {
+      width: 18px; /* réduit les barres */
+      height: 18px;
+    }
+
+    .navbar-brand {
+      width: 30px;
+      height: 40px;
+    }
+  }
+}
+
+/* Très petits écrans (≤ 360px) */
+@media (max-width: 360px) {
+  .navbar {
+    .container-fluid {
+      gap: 0.25rem; /* espace minimum entre logo et compte */
+    }
+
+    .navbar-brand {
+      flex: 0 0 auto; /* empêche le shrink */
+      margin-right: 0.25rem; /* garde un espace fixe */
+    }
+
+    .account-area {
+      .welcome {
+        max-width: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+
+  .welcome-name {
+    display: none !important;
+  }
+}

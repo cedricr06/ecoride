@@ -1,0 +1,42 @@
+@use "variables";
+@use "navbar";
+@use "footer";
+@use "hero";
+@use "presentation";
+@use "recherche";
+@use "inscription";
+@use "connexion";
+@use "monprofil";
+@use "admin";
+
+/* si ta navbar est fixed-top */
+header { margin-top: 56px; }
+
+/* === Sticky footer – version propre === */
+html, body { height: 100%; }
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;   /* dvh gère mieux le mobile que vh */
+  font-family: variables.$texte;
+  font-weight: 500;
+  line-height: 1.6;
+  color: #111;
+}
+
+main {
+  flex: 1 0 auto;       /* pousse le footer en bas quand contenu court */
+}
+
+/* ton footer */
+.footer {
+  margin-top: auto;     /* colle en bas */
+}
+
+/* Titres */
+h1, h2, h3, h4, h5, h6 {
+  font-family: variables.$titre;
+  font-weight: 700;
+  line-height: 1.3;
+}

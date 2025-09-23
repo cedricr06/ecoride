@@ -1,0 +1,1398 @@
+@charset "UTF-8";
+/* Base */
+.navbar {
+  background: #fff;
+  overflow: visible; /* évite tout clipping */
+}
+.navbar .nav-link::after {
+  content: none !important; /* neutralise d’éventuels ::after */
+}
+.navbar .nav-item .nav-link {
+  color: #333;
+  margin: 0 10px;
+}
+.navbar .nav-item .nav-link:hover {
+  color: #27AE60;
+}
+.navbar .btn {
+  border-radius: 9px;
+  font-weight: 600;
+  padding: 6px 14px;
+}
+.navbar .btn:hover {
+  background: rgb(35.1, 156.6, 86.4);
+}
+.navbar .account-area {
+  display: flex !important;
+  align-items: center;
+  gap: 0.6rem;
+  margin-left: auto;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+  flex-wrap: wrap; /* évite les débords sur très petites largeurs */
+}
+.navbar .account-area .welcome {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: clamp(120px, 28vw, 260px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-menu {
+  width: 200px !important;
+}
+
+.navbar-text {
+  color: #333;
+  font-style: italic;
+}
+
+.barre-menu {
+  background: #27AE60;
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+/* Crédits pill */
+.bg-credits {
+  background: #eaf7ef;
+  color: #27AE60;
+  border: 1px solid rgba(39, 174, 96, 0.25);
+  font-weight: 700;
+}
+
+/* Avatar */
+.user-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #27AE60;
+  color: #27AE60;
+  background: #fff;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  line-height: 1;
+  transition: transform 0.12s ease, background-color 0.12s ease;
+}
+.user-toggle:hover {
+  background: #f6fff9;
+  transform: translateY(-1px);
+}
+.user-toggle.show {
+  background: #f0fff4;
+}
+
+/* Desktop (>=992px) */
+@media (min-width: 992px) {
+  .navbar .collapse {
+    min-width: 0; /* au cas où tu utilises collapse ailleurs */
+  }
+  .navbar .navbar-nav {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 0.75rem;
+  }
+  .navbar .container-fluid {
+    display: flex;
+    align-items: center;
+  }
+  .navbar .nav-link {
+    white-space: nowrap;
+    padding: 0.5rem 0.75rem;
+  }
+  .navbar .navbar-brand {
+    order: 1;
+  }
+  .navbar .offcanvas-lg {
+    order: 2;
+    flex: 1 1 auto;
+  }
+  .navbar .offcanvas-lg .navbar-nav {
+    justify-content: flex-start;
+  }
+  .navbar .account-area {
+    order: 3;
+    margin-left: 0; /* enlève ms-auto */
+    justify-content: flex-end;
+  }
+  .navbar .navbar-toggler {
+    order: 4;
+  }
+}
+/* Mobile / Tablette (<992px) */
+@media (max-width: 991.98px) {
+  .navbar .container-fluid {
+    display: flex;
+    align-items: center;
+  }
+  .navbar .account-area {
+    order: 2;
+  }
+  .navbar .navbar-toggler {
+    order: 3;
+    margin-left: 0.5rem;
+  }
+  .offcanvas {
+    width: 260px !important;
+    max-height: 260px !important;
+    border-radius: 0 0 6px 6px;
+  }
+  .offcanvas .navbar-nav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+  }
+  .offcanvas .nav-item {
+    width: 100%;
+  }
+  .offcanvas .nav-link {
+    display: block;
+    padding: 0.75rem 0;
+  }
+  .offcanvas .btn {
+    width: 100%;
+  }
+  .offcanvas .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+    opacity: 1;
+  }
+}
+/* Petites largeurs */
+@media (max-width: 575.98px) {
+  .navbar .account-area {
+    gap: 0.45rem;
+  }
+  .navbar .account-area .welcome {
+    max-width: 42vw;
+  }
+  .navbar .account-area .bg-credits {
+    transform: scale(0.95);
+  }
+  .navbar .account-area .user-toggle {
+    width: 32px;
+    height: 32px;
+  }
+  .navbar .navbar-toggler {
+    padding: 0.25rem 0.35rem; /* réduit la zone cliquable */
+    font-size: 0.8rem; /* réduit l’icône générée */
+    width: 32px; /* même taille que ton avatar */
+    height: 32px;
+  }
+  .navbar .navbar-toggler-icon {
+    width: 18px; /* réduit les barres */
+    height: 18px;
+  }
+  .navbar .navbar-brand {
+    width: 30px;
+    height: 40px;
+  }
+}
+/* Très petits écrans (≤ 360px) */
+@media (max-width: 360px) {
+  .navbar .container-fluid {
+    gap: 0.25rem; /* espace minimum entre logo et compte */
+  }
+  .navbar .navbar-brand {
+    flex: 0 0 auto; /* empêche le shrink */
+    margin-right: 0.25rem; /* garde un espace fixe */
+  }
+  .navbar .account-area .welcome {
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .welcome-name {
+    display: none !important;
+  }
+}
+.footer {
+  /* Logo */
+  /* Liens */
+  /* Offcanvas: liens visibles sur fond clair */
+  /* Bouton hamburger caché par défaut */
+  /* ≤ 992px: afficher hamburger, cacher menu desktop */
+  /* ≤ 425px: empiler logo au-dessus du texte */
+  /* ≤ 320px: réduire taille du texte */
+}
+.footer.navbar {
+  background-color: #2c3e50;
+  color: #fff;
+  min-height: 56px;
+  height: auto;
+}
+.footer .footer-logo {
+  height: 22px;
+}
+.footer .container {
+  flex-wrap: nowrap;
+  row-gap: 0rem;
+}
+.footer .navbar-nav {
+  flex: 0 0 auto;
+}
+.footer .navbar-nav .nav-link {
+  color: #ffffff;
+  padding: 0;
+}
+.footer .navbar-nav .nav-link:hover {
+  color: #9bd3a3;
+}
+.footer .navbar-nav.desktop {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+}
+.footer .navbar-nav.desktop .nav-link {
+  white-space: nowrap;
+}
+.footer .offcanvas .nav-link {
+  color: #212529;
+}
+.footer .offcanvas .nav-link:hover {
+  color: #198754;
+}
+.footer .offcanvas .navbar-nav {
+  align-items: flex-start;
+}
+.footer .navbar-toggler {
+  display: none;
+}
+@media (max-width: 992px) {
+  .footer .navbar-toggler {
+    display: inline-flex;
+  }
+  .footer .navbar-nav.desktop {
+    display: none !important;
+  }
+  .footer .footerMenu {
+    background-color: #2c3e50;
+    color: white;
+    box-shadow: 0px 1px 3px 0px #333;
+  }
+  .footer .offcanvas {
+    max-height: 200px !important;
+  }
+}
+@media (max-width: 425px) {
+  .footer .brand {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  .footer .footer-logo {
+    height: 24px;
+  }
+}
+@media (max-width: 320px) {
+  .footer p {
+    text-align: center;
+    font-size: 8px;
+  }
+}
+
+.hero {
+  position: relative;
+  min-height: 560px;
+  color: #fff;
+  background: url("../img/Ecoride_hero.jpg") center/cover no-repeat;
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.35) 40%, rgba(0, 0, 0, 0.45) 100%);
+}
+.hero .texte-hero {
+  font-size: 20px;
+}
+.hero .formulaire-hero {
+  background-color: rgba(0, 0, 0, 0.7882352941);
+  border-radius: 16px;
+}
+.hero .hero-titre {
+  background-color: rgba(0, 0, 0, 0.7882352941);
+  border-radius: 16px;
+}
+.hero .container,
+.hero .container-fluid,
+.hero .container-xl {
+  position: relative;
+  z-index: 1;
+}
+.hero .form-label {
+  color: #fff;
+}
+.hero .form-control {
+  border-radius: 0.75rem;
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 0;
+}
+
+@media (min-width: 992px) {
+  .hero {
+    padding-top: 2.5rem;
+    padding-bottom: 2.5rem;
+  }
+}
+@media (max-width: 991.98px) {
+  .hero {
+    min-height: 480px;
+  }
+}
+.presentation {
+  background-color: #f2f2f2;
+  border-bottom: 1px rgba(0, 0, 0, 0.103) solid;
+}
+
+.avantage {
+  text-align: center;
+}
+.avantage .icon-wrapper {
+  background-color: #27AE60;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  margin: 10px auto 10px auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.avantage .icon-wrapper img {
+  width: 30px;
+  height: 30px;
+  filter: brightness(0) invert(1);
+}
+.avantage .titre-avantage {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+.avantage .texte-avantage {
+  font-size: 0.95;
+  color: #2c3e50;
+}
+
+.presentation-section {
+  padding: 50px;
+  background-color: #f2f2f2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.presentation-section .presentation-img {
+  max-width: 80%;
+  margin-right: 50px;
+  border-radius: 16px;
+  box-shadow: 1px 2px 3px #2c3e50;
+}
+.presentation-section .presentation-content {
+  text-align: left;
+}
+
+.liste-avantage-presentation {
+  list-style: none;
+  padding-left: 0;
+}
+.liste-avantage-presentation li {
+  position: relative;
+  padding-left: 30px;
+  margin-bottom: 10px;
+}
+.liste-avantage-presentation li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: #27AE60;
+  color: #fff;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 991.98px) {
+  .presentation-section {
+    min-height: auto;
+  }
+  .presentation-img {
+    margin: 0;
+  }
+}
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .presentation-img {
+    max-width: 100% !important;
+    margin-right: 0;
+  }
+}
+@media (max-width: 767.98px) {
+  .presentation-img {
+    max-width: 100%;
+    margin-right: 0;
+  }
+  .liste-avantage-presentation {
+    padding-left: 0;
+  }
+  .liste-avantage-presentation li {
+    padding-left: 28px;
+  }
+}
+@media (max-width: 428.98px) {
+  .presentation-section .container {
+    padding-right: 0;
+  }
+  .presentation-section {
+    padding: 20px;
+  }
+  .presentation-section .row {
+    flex-direction: column;
+    text-align: left;
+  }
+  .presentation-section .presentation-img {
+    max-width: 100%;
+    margin: 16px auto 16px auto;
+  }
+}
+/* =========================================================
+   HERO RECHERCHE (image + filtre sombre)
+   ========================================================= */
+.head {
+  position: relative;
+  min-height: 560px;
+  color: #fff;
+  /* Image de fond */
+  /* Overlay sombre */
+  /* contenu au-dessus des pseudo-éléments */
+  /* petit zoom progressif */
+}
+.head::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("../img/road-7349232_1280.jpg") center/cover no-repeat;
+  z-index: 0;
+  transform: scale(1);
+  transition: transform 2s ease-in-out;
+  will-change: transform;
+}
+.head::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.35) 40%, rgba(0, 0, 0, 0.45) 100%);
+  z-index: 1;
+}
+.head > * {
+  position: relative;
+  z-index: 2;
+}
+.head.bg-zoom::before {
+  transform: scale(1.1);
+}
+
+/* Titre */
+.titre-recherche {
+  text-align: center;
+  margin: 70px 0 20px;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 16px;
+}
+.titre-recherche h1 {
+  margin: 0;
+  padding: 5px 15px;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 16px;
+}
+
+/* =========================================================
+   WRAP
+   ========================================================= */
+.search-hero {
+  padding-block: 24px;
+}
+
+.forms-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  flex-wrap: nowrap;
+}
+
+/* =========================================================
+   PANNEAUX (cartes verre fumé)
+   ========================================================= */
+.form-box {
+  width: 360px;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(2px);
+}
+
+.form-box-title {
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+/* =========================================================
+   CHAMPS (inputs clairs dans cartes sombres)
+   ========================================================= */
+.form-label {
+  font-weight: 600;
+}
+
+.input-group-text {
+  background: #fff;
+  color: #6c757d;
+  border-color: #ced4da;
+  border-left: 0;
+}
+
+.input-group .form-control {
+  border-right: 0;
+}
+
+.form-box .form-control,
+.form-box .form-select {
+  background: #fff;
+  color: #111;
+  border: 1px solid #ced4da;
+}
+
+.form-box .form-control::placeholder {
+  color: #6c757d;
+  opacity: 1;
+}
+
+/* =========================================================
+   BOUTONS
+   ========================================================= */
+.search-btn {
+  min-height: 48px;
+  padding: 0 24px;
+  border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+  width: auto !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-filtre {
+  background: #3498DB;
+  border: none;
+  color: #fff;
+}
+.btn-filtre:hover, .btn-filtre:focus, .btn-filtre:active, .btn-filtre.active {
+  background: #3498DB !important;
+  color: #fff;
+}
+.show > .btn-filtre.dropdown-toggle {
+  background: #3498DB !important;
+  color: #fff;
+}
+
+/* =========================================================
+   COLLAPSE (filtres avancés)
+   ========================================================= */
+.filters-advanced {
+  position: static !important; /* pas de position fixe */
+  inset: auto !important;
+  transform: none !important;
+  z-index: auto !important;
+  width: 100%;
+  max-width: 560px;
+  margin: 12px auto 0;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+}
+.filters-advanced .form-label {
+  color: #fff;
+}
+.filters-advanced .input-group-text {
+  background: #fff;
+  color: #6c757d;
+  border-color: #ced4da;
+}
+.filters-advanced .form-control, .filters-advanced .form-select {
+  background: #fff;
+  border: 1px solid #ced4da;
+  color: #111;
+}
+.filters-advanced .form-control::placeholder, .filters-advanced .form-select::placeholder {
+  color: #6c757d;
+}
+
+/* ---------- Animation filtres : uniquement mobile/tablette ---------- */
+@media (max-width: 991.98px) {
+  #filtersCollapse .form-box {
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  #filtersCollapse.show .form-box {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  #filtersCollapse.collapsing .form-box {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+/* ---------- Desktop : toujours visible même sans .show ---------- */
+@media (min-width: 992px) {
+  #filtersCollapse {
+    display: flex !important;
+  }
+  #filtersCollapse .form-box {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+/* Quand les filtres sont ouverts, on ajoute de l’air en bas du hero
+   → l’image de fond “descend” visuellement */
+@media (max-width: 991.98px) {
+  .head {
+    overflow: visible;
+  }
+  #filtersCollapse {
+    margin-top: 12px;
+  }
+}
+/* Fallback si :has() n’est pas supporté */
+@supports not (selector(:has(*))) {
+  @media (max-width: 991.98px) {
+    .head {
+      min-height: 900px;
+      transition: min-height 0.25s ease;
+    } /* ajuste si besoin */
+  }
+}
+/* Accessibilité : réduire les animations si demandé */
+@media (prefers-reduced-motion: reduce) {
+  #filtersCollapse .form-box {
+    transition: none;
+  }
+}
+/* =========================================================
+   RÉPONSIVE
+   ========================================================= */
+/* Tablette */
+@media (max-width: 991.98px) {
+  .form-box {
+    width: 320px;
+  }
+  .forms-wrap {
+    gap: 20px;
+  }
+}
+/* Mobile */
+@media (max-width: 767.98px) {
+  .forms-wrap {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    padding-inline: 12px;
+  }
+  .form-box {
+    width: 100%;
+  }
+  .search-btn {
+    align-self: center;
+  }
+}
+/* Petit padding sur le conteneur des filtres en très petit écran */
+@media (max-width: 575.98px) {
+  .filters-advanced {
+    padding: 0.25rem;
+  }
+}
+/* =========================================================
+   LISTE DES TRAJETS
+   ========================================================= */
+.trajets-list {
+  padding: 12px 0 28px;
+}
+
+.trajets-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 768px) {
+  .trajets-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1200px) {
+  .trajets-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.trajet-card {
+  position: relative;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  padding: 18px 16px;
+}
+
+.trajet-card__avatar {
+  width: 72px;
+  height: 72px;
+  flex: 0 0 72px;
+  border-radius: 50%;
+  border: 3px solid var(--bs-success);
+  background: radial-gradient(circle at 50% 50%, var(--bs-primary) 0 38px, transparent 39px);
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.trajet-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.trajet-card__avatar .avatar-initials {
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.1rem;
+  line-height: 1;
+  letter-spacing: 0.5px;
+  user-select: none;
+}
+
+.trajet-card__title {
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.trajet-card__route {
+  color: #333;
+}
+
+.vehicule-badge {
+  display: inline-block;
+  background: rgba(13, 110, 253, 0.1);
+  color: #0d6efd;
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  line-height: 1.2;
+}
+
+.trajet-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.trajet-card__price {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  font-weight: 700;
+}
+
+.trajet-card__eco {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 0.8rem;
+}
+
+.trajet-info {
+  color: #333;
+}
+
+.head-inscription {
+  position: relative;
+  min-height: 100vh;
+  color: #fff;
+  background: url("../img/road-7349232_1280.jpg") center/cover no-repeat;
+}
+.head-inscription::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.35) 40%, rgba(0, 0, 0, 0.45) 100%);
+  z-index: 0;
+  pointer-events: none;
+}
+.head-inscription .bg-dark {
+  background-color: rgba(0, 0, 0, 0.75) !important;
+}
+.head-inscription .titre-formulaire {
+  color: #fff;
+  padding: 15px;
+}
+.head-inscription .btn-connexion {
+  width: 200px;
+  margin: 10px;
+}
+.head-inscription .form-container {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  margin-inline: auto;
+}
+
+.text-muted {
+  color: #fff !important;
+}
+
+/* ---- Password eye ---- */
+/* 1) Empêcher un overlay de bloquer les clics */
+.head::after {
+  pointer-events: none;
+  z-index: 0;
+}
+
+.form-container {
+  position: relative;
+  z-index: 2 !important;
+} /* le bloc passe devant */
+/* Cacher l’œil natif d’Edge */
+input[type=password]::-ms-reveal,
+input[type=password]::-ms-clear {
+  display: none;
+}
+
+/* Wrapper du champ */
+.password-wrap {
+  position: relative;
+  isolation: isolate; /* évite que des parents perturbent le z-index */
+  overflow: visible; /* ne pas couper le bouton */
+}
+
+/* L’input est sous le bouton et laisse la place à droite */
+.password-wrap .form-control {
+  position: relative;
+  z-index: 0; /* sous le bouton */
+  padding-right: 3rem; /* place pour l’icône */
+}
+
+/* Le bouton œil au-dessus de l’input */
+.password-wrap .eye-btn {
+  position: absolute;
+  top: 32px;
+  bottom: 0;
+  left: auto;
+  inset-inline-end: 12px; /* = right:12px (RTL-safe) */
+  inset-inline-start: auto;
+  margin-block: auto;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  line-height: 0;
+  z-index: 3;
+  /* œil “ouvert” */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M12 5C6.5 5 2 9.5 2 12s4.5 7 10 7 10-4.5 10-7S17.5 5 12 5zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/><circle cx='12' cy='12' r='2.5'/></svg>");
+  /* Thèmes/fonds : change juste la couleur */
+}
+.password-wrap .eye-btn::before {
+  content: "";
+  display: block;
+  width: 20px;
+  height: 20px;
+  margin: auto;
+  background: currentColor;
+  /* Safari/Chromium */
+  -webkit-mask: no-repeat center/20px 20px url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 5C6.5 5 2 9.5 2 12s4.5 7 10 7 10-4.5 10-7S17.5 5 12 5zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/><circle cx='12' cy='12' r='2.5'/></svg>");
+  mask: no-repeat center/20px 20px url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 5C6.5 5 2 9.5 2 12s4.5 7 10 7 10-4.5 10-7S17.5 5 12 5zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/><circle cx='12' cy='12' r='2.5'/></svg>");
+}
+.password-wrap .eye-btn .bg-dark .eye-btn {
+  color: #fff;
+}
+
+/* œil “barré” quand actif */
+.password-wrap .eye-btn.is-on {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M3 4.3 4.3 3 21 19.7 19.7 21 16.9 18.2A11.7 11.7 0 0 1 12 19c-5.5 0-10-4.5-10-7 0-1.2.7-2.6 2-3.9l2.6 2.6A5 5 0 0 0 12 17c1.1 0 2.1-.3 3-.8l-1.8-1.8a3 3 0 1 1-4.2-4.2L7.2 7.4 3 4.3zM21.9 12c-.3.9-1.1 2.1-2.4 3.3l-2.5-2.5a5 5 0 0 0-5.3-5.3L9.2 5.1c.9-.1 1.8-.1 2.8-.1 5.5 0 10 4.5 10 7z'/></svg>");
+  color: black !important;
+}
+
+/* œil “barré” quand actif : on change le mask du ::before */
+.password-wrap .eye-btn.is-on::before {
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M3 4.3 4.3 3 21 19.7 19.7 21 16.9 18.2A11.7 11.7 0 0 1 12 19c-5.5 0-10-4.5-10-7 0-1.2.7-2.6 2-3.9l2.6 2.6A5 5 0 0 0 12 17c1.1 0 2.1-.3 3-.8l-1.8-1.8a3 3 0 1 1-4.2-4.2L7.2 7.4 3 4.3zM21.9 12c-.3.9-1.1 2.1-2.4 3.3l-2.5-2.5a5 5 0 0 0-5.3-5.3L9.2 5.1c.9-.1 1.8-.1 2.8-.1 5.5 0 10 4.5 10 7z'/></svg>");
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M3 4.3 4.3 3 21 19.7 19.7 21 16.9 18.2A11.7 11.7 0 0 1 12 19c-5.5 0-10-4.5-10-7 0-1.2.7-2.6 2-3.9l2.6 2.6A5 5 0 0 0 12 17c1.1 0 2.1-.3 3-.8l-1.8-1.8a3 3 0 1 1-4.2-4.2L7.2 7.4 3 4.3zM21.9 12c-.3.9-1.1 2.1-2.4 3.3l-2.5-2.5a5 5 0 0 0-5.3-5.3L9.2 5.1c.9-.1 1.8-.1 2.8-.1 5.5 0 10 4.5 10 7z'/></svg>");
+}
+
+.head-connecter {
+  position: relative;
+  min-height: 100vh;
+  color: #fff;
+  background: url("../img/road-7349232_1280.jpg") center/cover no-repeat;
+}
+.head-connecter::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.35) 40%, rgba(0, 0, 0, 0.45) 100%);
+  z-index: 0;
+  pointer-events: none;
+}
+.head-connecter .bg-dark {
+  background-color: rgba(0, 0, 0, 0.75) !important;
+  z-index: 1;
+}
+.head-connecter .titre-formulaire {
+  color: #fff;
+  padding: 15px;
+}
+.head-connecter .btn-connexion {
+  margin-right: 0px !important;
+  margin-top: 10px;
+  min-width: 160px; /* même taille visuelle */
+  padding-inline: 1.25rem;
+}
+.head-connecter .btn-row {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem; /* espace horizontal (ou vertical en mobile) */
+  margin-top: 0.5rem; /* espace avec ce qu’il y a au-dessus */
+}
+
+/* Empile proprement sur mobile */
+@media (max-width: 428px) {
+  .btn-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .btn-connexion {
+    min-width: 0;
+    width: 100%;
+  }
+}
+/* === Palette EcoRide (rappels visuels de ta home) === */
+.profile {
+  margin-top: 100px !important;
+  flex: 1;
+  --radius: 16px;
+  /* Avatar initiales */
+  /* Barre de progression des crédits */
+  /* Chips / badges préférences */
+  /* Onglets sobres avec accent vert */
+  /* Liste des voyages */
+  /* Carte véhicule */
+}
+.profile .container, .profile {
+  max-width: 1160px;
+}
+.profile__card {
+  border-radius: var(--radius);
+  border: 1px solid #e9eef4;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+}
+.profile__avatar {
+  margin-right: 50px;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #27AE60 0%, #2b6cb0 100%);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.profile .profile__avatar img.avatar-img {
+  border-radius: 50%;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.profile .mail-profil {
+  color: #1f3342 !important;
+}
+.profile .info-profil {
+  color: #1f3342;
+}
+.profile .credit-pill {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #eaf7ef; /* vert 100 */
+  color: #22a559; /* vert action */
+  font-weight: 700;
+  border: 1px solid rgba(34, 165, 89, 0.25);
+}
+.profile__progress {
+  height: 8px;
+  background: #eef2f6;
+  border-radius: 999px;
+  border: 1px solid #e3e9ef;
+}
+.profile__progress .progress-bar {
+  width: var(--credit, 60%); /* tu peux piloter en inline si tu veux */
+  background: #27AE60;
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+.profile__chip {
+  background: #eaf7ef;
+  color: #27AE60;
+  border: 1px solid rgba(39, 174, 96, 0.25);
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+.profile .profile__tabs .nav-link {
+  border: 0;
+  color: #44515e;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  position: relative;
+}
+.profile .profile__tabs .nav-link.active {
+  color: #27AE60;
+  background: transparent;
+}
+.profile .profile__tabs .nav-link.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 3px;
+  background: #27AE60;
+  border-radius: 3px 3px 0 0;
+}
+.profile .profile__tabs .nav-item + .nav-item {
+  margin-left: 0.25rem;
+}
+.profile__list .list-group-item {
+  border: 1px solid #e8edf2;
+  border-radius: 12px;
+  margin-bottom: 0.5rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.profile__list .list-group-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+}
+.profile__vehicle {
+  border: 1px solid #e8edf2;
+  border-radius: 14px;
+}
+
+ul {
+  text-align: justify !important;
+  list-style-type: none;
+  margin-left: none !important;
+}
+
+/* Badge éco (électrique) */
+.badge-eco {
+  background: #eaf7ef;
+  color: #27AE60;
+  border: 1px solid rgba(39, 174, 96, 0.25);
+  font-weight: 700;
+}
+
+.btn-vehicule {
+  width: 100%;
+}
+
+/* Harmonisation des boutons (match navbar/home) */
+.btn-success {
+  background-color: #27AE60;
+  border-color: #27AE60;
+}
+.btn-success:hover, .btn-success:focus {
+  filter: brightness(0.95);
+}
+
+.btn-outline-success {
+  color: #27AE60;
+  border-color: #27AE60;
+}
+.btn-outline-success:hover, .btn-outline-success:focus {
+  color: #fff;
+  background-color: #27AE60;
+  border-color: #27AE60;
+}
+
+.page-profil main {
+  flex: 1 0 auto; /* le contenu pousse */
+}
+
+/* Petites retouches responsive */
+@media (max-width: 991.98px) {
+  .profile__card {
+    border-radius: 14px;
+  }
+  .profile__tabs .nav-link {
+    padding: 0.6rem 0.75rem;
+  }
+}
+.info-tab-admin {
+  color: #27AE60;
+}
+
+.nav-tabs .nav-link {
+  color: #333 !important;
+}
+.nav-tabs .active {
+  color: #3498DB !important;
+}
+
+.btn-admin {
+  width: 100% !important;
+}
+
+.titre-tableau th {
+  color: #27AE60;
+  text-align: center;
+  border-left: 1px solid rgba(73, 72, 72, 0.096);
+  border-right: 1px solid rgba(73, 72, 72, 0.096);
+}
+
+.tableau-utilisateurs td {
+  border-left: 1px solid rgba(73, 72, 72, 0.096);
+  border-right: 1px solid rgba(73, 72, 72, 0.096);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; /* espace entre les boutons */
+}
+
+/* Empile par défaut, passe en 2 colonnes ≥1152px */
+.admin-sidebar {
+  display: grid;
+  grid-template-columns: 1fr; /* empilé */
+  gap: 1rem; /* espace entre cartes */
+  /* cartes pleine hauteur quand côte à côte */
+}
+.admin-sidebar .card {
+  height: 100%;
+}
+
+.chart-warp {
+  position: relative;
+  width: 100%;
+  min-height: 170px;
+  height: 170px;
+}
+.chart-warp canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Par défaut (≥ 1152px) tu restes sur le grid Bootstrap: 
+   col-lg-4 / col-lg-8 => 2 colonnes */
+.admin-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+/* ===== breakpoints ===== */
+/* ===== haut de page : 2 cartes ===== */
+/* wrapper autour des 2 cartes (gauche = identité, droite = aperçu rapide) */
+.top-cards {
+  display: grid;
+  grid-template-columns: 1fr; /* <425px : empilé */
+  gap: 0.75rem;
+}
+.top-cards .card {
+  height: 100%;
+}
+
+.profile__avatar-admin {
+  margin-right: 0px;
+}
+
+/* Carte de gauche : avatar + texte */
+.admin-identity {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-direction: column; /* défaut : mobile */
+  text-align: center;
+}
+.admin-identity .profile__avatar {
+  flex: 0 0 auto;
+}
+.admin-identity .identity-text {
+  flex: 1 1 auto;
+}
+
+.list-unstyled {
+  text-align: justify !important;
+  margin-left: 50px !important;
+}
+
+/* À partir de 1152px et en-dessous,
+   on empile: droite passe sous gauche */
+@media (max-width: 1152px) {
+  .admin-grid > [class*=col-lg-] {
+    /* écrase la largeur des colonnes lg */
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  /* espaces cohérents */
+  .admin-grid > * {
+    margin-bottom: 1rem;
+  }
+  .admin-sidebar {
+    grid-template-columns: 1fr 1fr; /* deux colonnes */
+    align-items: stretch;
+  }
+}
+/*  1152px le contenu "pousse" visuellement */
+@media (min-width: 992px) and (max-width: 1299.98px) {
+  .container {
+    max-width: 1140px; /* harmonieux autour de 1152 */
+  }
+}
+/* desktop/tablette (≥425px) */
+@media (min-width: 425px) {
+  .top-cards {
+    grid-template-columns: 1fr 1fr; /* ≥425px : côte à côte */
+    gap: 1rem;
+  }
+  .admin-identity {
+    flex-direction: row; /* avatar gauche / texte droite */
+    text-align: left;
+  }
+}
+/* === Overrides finaux pour garantir le comportement demandé === */
+.admin-identity {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-direction: column;
+  text-align: center;
+}
+.admin-identity .profile__avatar {
+  flex: 0 0 auto;
+}
+.admin-identity .identity-text {
+  flex: 1 1 auto;
+}
+
+@media (min-width: 425px) {
+  .admin-identity {
+    flex-direction: row;
+    text-align: left;
+  }
+}
+/* <425px : empilé (déjà par défaut, garde pour clarté) */
+@media (max-width: 425px) {
+  .top-cards {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  .admin-identity {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+/* >1152px : re-empile (1 colonne) */
+@media (min-width: 1153px) {
+  .top-cards {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}
+/* ===== carte de gauche : avatar + texte ===== */
+.admin-identity {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.admin-identity {
+  flex-direction: column;
+  text-align: center;
+}
+
+/* même breakpoint que plus haut si tu l'as */
+/* Carte identité : texte à gauche partout */
+.admin-identity {
+  display: flex;
+  gap: 1rem;
+  /* mobile: pile l’avatar au-dessus MAIS on reste aligné à gauche */
+  flex-direction: column;
+  align-items: flex-start; /* ← plus de centrage */
+  text-align: left;
+}
+.admin-identity .profile__avatar {
+  margin-bottom: 0.25rem; /* petit air entre avatar et texte */
+}
+.admin-identity .identity-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+/* ≥425px: avatar à gauche / texte à droite (toujours left) */
+@media (min-width: 425px) {
+  .admin-identity {
+    flex-direction: row;
+    align-items: center; /* aligne verticalement avatar + texte */
+    text-align: left; /* sécurité au cas où */
+  }
+}
+/* si ta navbar est fixed-top */
+header {
+  margin-top: 56px;
+}
+
+/* === Sticky footer – version propre === */
+html, body {
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh; /* dvh gère mieux le mobile que vh */
+  font-family: "roboto", system-ui, sans-serif;
+  font-weight: 500;
+  line-height: 1.6;
+  color: #111;
+}
+
+main {
+  flex: 1 0 auto; /* pousse le footer en bas quand contenu court */
+}
+
+/* ton footer */
+.footer {
+  margin-top: auto; /* colle en bas */
+}
+
+/* Titres */
+h1, h2, h3, h4, h5, h6 {
+  font-family: "poppins", system-ui, sans-serif;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/*# sourceMappingURL=style.css.map */

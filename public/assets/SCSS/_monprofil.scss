@@ -1,0 +1,198 @@
+@use "variables";
+
+/* === Palette EcoRide (rappels visuels de ta home) === */
+
+$eco-green-100: #eaf7ef;
+$eco-blue: #2b6cb0; // bleu logo "RIDE"
+$eco-navy: #1f3342; // bleu nuit (nav/footer)
+$eco-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+
+.profile {
+  margin-top: 100px !important;
+  flex: 1;
+  --radius: 16px;
+  .container,
+  & {
+    max-width: 1160px;
+  }
+  
+
+  &__card {
+    border-radius: var(--radius);
+    border: 1px solid #e9eef4;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Avatar initiales */
+  &__avatar {
+    margin-right: 50px;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, variables.$vert 0%, $eco-blue 100%);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .profile__avatar img.avatar-img {
+    border-radius: 50%;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .mail-profil {
+    color: #1f3342 !important;
+  }
+  .info-profil {
+    color: #1f3342;
+  }
+
+  .credit-pill {
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: #eaf7ef; /* vert 100 */
+    color: #22a559; /* vert action */
+    font-weight: 700;
+    border: 1px solid rgba(34, 165, 89, 0.25);
+  }
+
+  /* Barre de progression des crédits */
+  &__progress {
+    height: 8px;
+    background: #eef2f6;
+    border-radius: 999px;
+    border: 1px solid #e3e9ef;
+
+    .progress-bar {
+      width: var(--credit, 60%); /* tu peux piloter en inline si tu veux */
+      background: variables.$vert;
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+  }
+
+  /* Chips / badges préférences */
+  &__chip {
+    background: $eco-green-100;
+    color: variables.$vert;
+    border: 1px solid rgba(variables.$vert, 0.25);
+    padding: 0.35rem 0.6rem;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+
+  /* Onglets sobres avec accent vert */
+  .profile {
+    &__tabs {
+      .nav-link {
+        border: 0;
+        color: #44515e;
+        font-weight: 600;
+        padding: 0.75rem 1rem;
+        position: relative;
+
+        &.active {
+          color: variables.$vert;
+          background: transparent;
+
+          &::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -1px;
+            height: 3px;
+            background: variables.$vert;
+            border-radius: 3px 3px 0 0;
+          }
+        }
+      }
+
+      .nav-item + .nav-item {
+        margin-left: 0.25rem;
+      }
+    }
+  }
+  
+
+  /* Liste des voyages */
+  &__list .list-group-item {
+    border: 1px solid #e8edf2;
+    border-radius: 12px;
+    margin-bottom: 0.5rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: $eco-shadow;
+    }
+  }
+
+  /* Carte véhicule */
+  &__vehicle {
+    border: 1px solid #e8edf2;
+    border-radius: 14px;
+  }
+}
+ul{
+    text-align: justify !important;
+    list-style-type: none;
+    margin-left: none !important;
+  }
+
+/* Badge éco (électrique) */
+.badge-eco {
+  background: $eco-green-100;
+  color: variables.$vert;
+  border: 1px solid rgba(variables.$vert, 0.25);
+  font-weight: 700;
+}
+
+.btn-vehicule {
+  width: 100%;
+}
+
+/* Harmonisation des boutons (match navbar/home) */
+.btn-success {
+  background-color: variables.$vert;
+  border-color: variables.$vert;
+
+  &:hover,
+  &:focus {
+    filter: brightness(0.95);
+  }
+}
+.btn-outline-success {
+  color: variables.$vert;
+  border-color: variables.$vert;
+
+  &:hover,
+  &:focus {
+    color: #fff;
+    background-color: variables.$vert;
+    border-color: variables.$vert;
+  }
+}
+
+.page-profil main {
+  flex: 1 0 auto; /* le contenu pousse */
+}
+
+
+/* Petites retouches responsive */
+@media (max-width: 991.98px) {
+  .profile {
+    &__card {
+      border-radius: 14px;
+    }
+    &__tabs .nav-link {
+      padding: 0.6rem 0.75rem;
+    }
+  }
+}

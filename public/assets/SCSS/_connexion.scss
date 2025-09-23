@@ -1,0 +1,60 @@
+@use "variables";
+
+.head-connecter {
+  position: relative;
+  min-height: 100vh; // prend tout l’écran
+  color: #fff;
+  background: url("../img/road-7349232_1280.jpg") center/cover no-repeat;
+
+  // overlay sombre
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.45) 0%,
+      rgba(0, 0, 0, 0.35) 40%,
+      rgba(0, 0, 0, 0.45) 100%
+    );
+    z-index: 0; // derrière le contenu
+    pointer-events: none; // ne bloque JAMAIS les clics
+  }
+
+  .bg-dark {
+    background-color: rgba(0, 0, 0, 0.75) !important;
+    z-index: 1;
+  }
+
+  .titre-formulaire {
+    color: #fff;
+    padding: 15px;
+  }
+
+  .btn-connexion {
+    //width: 200px;
+    margin-right: 0px !important;
+    margin-top: 10px;
+    min-width: 160px; /* même taille visuelle */
+    padding-inline: 1.25rem;
+  }
+  
+  .btn-row {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem; /* espace horizontal (ou vertical en mobile) */
+    margin-top: 0.5rem; /* espace avec ce qu’il y a au-dessus */
+  }
+}
+
+/* Empile proprement sur mobile */
+@media (max-width: 428px) {
+  .btn-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .btn-connexion {
+    min-width: 0;
+    width: 100%;
+  }
+}

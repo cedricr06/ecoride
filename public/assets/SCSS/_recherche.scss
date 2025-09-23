@@ -1,0 +1,288 @@
+@use "variables";
+
+/* =========================================================
+   HERO RECHERCHE (image + filtre sombre)
+   ========================================================= */
+.head {
+  position: relative;
+  min-height: 560px;
+  color: #fff;
+
+  /* Image de fond */
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url("../img/road-7349232_1280.jpg") center/cover no-repeat;
+    z-index: 0;
+    transform: scale(1);
+    transition: transform 2s ease-in-out;
+    will-change: transform;
+  }
+
+  /* Overlay sombre */
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.45) 0%,
+      rgba(0, 0, 0, 0.35) 40%,
+      rgba(0, 0, 0, 0.45) 100%
+    );
+    z-index: 1;
+  }
+
+  > * { position: relative; z-index: 2; } /* contenu au-dessus des pseudo-éléments */
+  &.bg-zoom::before { transform: scale(1.1); } /* petit zoom progressif */
+}
+
+/* Titre */
+.titre-recherche {
+  text-align: center;
+  margin: 70px 0 20px;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 16px;
+
+  h1 {
+    margin: 0;
+    padding: 5px 15px;
+    background: rgba(0, 0, 0, 0.75);
+    border-radius: 16px;
+  }
+}
+
+/* =========================================================
+   WRAP
+   ========================================================= */
+.search-hero { padding-block: 24px; }
+
+.forms-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  flex-wrap: nowrap;
+}
+
+/* =========================================================
+   PANNEAUX (cartes verre fumé)
+   ========================================================= */
+.form-box {
+  width: 360px;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(2px);
+}
+
+.form-box-title {
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+/* =========================================================
+   CHAMPS (inputs clairs dans cartes sombres)
+   ========================================================= */
+.form-label { font-weight: 600; }
+
+.input-group-text {
+  background: #fff;
+  color: #6c757d;
+  border-color: #ced4da;
+  border-left: 0;
+}
+
+.input-group .form-control { border-right: 0; }
+
+.form-box .form-control,
+.form-box .form-select {
+  background: #fff;
+  color: #111;
+  border: 1px solid #ced4da;
+}
+
+.form-box .form-control::placeholder { color: #6c757d; opacity: 1; }
+
+/* =========================================================
+   BOUTONS
+   ========================================================= */
+.search-btn {
+  min-height: 48px;
+  padding: 0 24px;
+  border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+  width: auto !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-filtre {
+  background: variables.$bleu;
+  border: none;
+  color: #fff;
+
+  &:hover, &:focus, &:active, &.active { background: variables.$bleu !important; color: #fff; }
+  .show > &.dropdown-toggle { background: variables.$bleu !important; color: #fff; }
+}
+
+/* =========================================================
+   COLLAPSE (filtres avancés)
+   ========================================================= */
+.filters-advanced {
+  position: static !important;  /* pas de position fixe */
+  inset: auto !important;
+  transform: none !important;
+  z-index: auto !important;
+  width: 100%;
+  max-width: 560px;
+  margin: 12px auto 0;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, .65);
+  color: #fff;
+
+  .form-label { color: #fff; }
+  .input-group-text { background: #fff; color: #6c757d; border-color: #ced4da; }
+  .form-control, .form-select {
+    background: #fff;
+    border: 1px solid #ced4da;
+    color: #111;
+    &::placeholder { color: #6c757d; }
+  }
+}
+
+/* ---------- Animation filtres : uniquement mobile/tablette ---------- */
+@media (max-width: 991.98px) {
+  #filtersCollapse .form-box {
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity .3s ease, transform .3s ease;
+  }
+  #filtersCollapse.show .form-box { opacity: 1; transform: translateY(0); }
+  #filtersCollapse.collapsing .form-box { opacity: 0; transform: translateY(-8px); }
+}
+
+/* ---------- Desktop : toujours visible même sans .show ---------- */
+@media (min-width: 992px) {
+  #filtersCollapse { display: flex !important; }
+  #filtersCollapse .form-box {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* Quand les filtres sont ouverts, on ajoute de l’air en bas du hero
+   → l’image de fond “descend” visuellement */
+@media (max-width: 991.98px) {
+  .head{overflow: visible;}
+  #filtersCollapse { margin-top: 12px; }
+}
+
+/* Fallback si :has() n’est pas supporté */
+@supports not(selector(:has(*))) {
+  @media (max-width: 991.98px) {
+    .head { min-height: 900px; transition: min-height .25s ease; } /* ajuste si besoin */
+  }
+}
+
+/* Accessibilité : réduire les animations si demandé */
+@media (prefers-reduced-motion: reduce) {
+  #filtersCollapse .form-box { transition: none; }
+}
+
+/* =========================================================
+   RÉPONSIVE
+   ========================================================= */
+/* Tablette */
+@media (max-width: 991.98px) {
+  .form-box { width: 320px; }
+  .forms-wrap { gap: 20px; }
+}
+
+/* Mobile */
+@media (max-width: 767.98px) {
+  .forms-wrap {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    padding-inline: 12px;
+  }
+  .form-box { width: 100%; }
+  .search-btn { align-self: center; }
+}
+
+/* Petit padding sur le conteneur des filtres en très petit écran */
+@media (max-width: 575.98px) {
+  .filters-advanced { padding: .25rem; }
+}
+
+/* =========================================================
+   LISTE DES TRAJETS
+   ========================================================= */
+.trajets-list { padding: 12px 0 28px; }
+
+.trajets-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+@media (min-width: 768px)   { .trajets-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1200px)  { .trajets-grid { grid-template-columns: repeat(3, 1fr); } }
+
+.trajet-card {
+  position: relative;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.08);
+  padding: 18px 16px;
+}
+
+.trajet-card__avatar {
+  width: 72px; height: 72px; flex: 0 0 72px;
+  border-radius: 50%;
+  border: 3px solid var(--bs-success);
+  background: radial-gradient(circle at 50% 50%, var(--bs-primary) 0 38px, transparent 39px);
+  overflow: hidden;
+  display: inline-flex; align-items: center; justify-content: center;
+
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .avatar-initials {
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.1rem;
+    line-height: 1;
+    letter-spacing: .5px;
+    user-select: none;
+  }
+}
+
+.trajet-card__title { font-weight: 700; line-height: 1.2; }
+.trajet-card__route { color: #333; }
+
+.vehicule-badge {
+  display: inline-block;
+  background: rgba(13,110,253,.1);
+  color: #0d6efd;
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: .85rem;
+  line-height: 1.2;
+}
+
+.trajet-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.trajet-card__price { position: absolute; right: 14px; bottom: 12px; font-weight: 700; }
+.trajet-card__eco   { position: absolute; top: 10px; right: 10px; font-size: .8rem; }
+
+.trajet-info { color: #333; }
+

@@ -1,0 +1,15 @@
+{
+    "name" : "cedricr06/ecoride",
+    "description": "Application web de covoitureage EcoRide",
+    "type" : "project",
+    "autoload": {
+        "psr-4": {
+            "App\\" : "app"
+        }
+    },   
+    "require": {
+        "vlucas/phpdotenv": "^5.6",
+        "mongodb/mongodb": "^2.1",
+        "phpmailer/phpmailer": "^6.10"
+    }
+}

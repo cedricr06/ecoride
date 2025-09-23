@@ -1,0 +1,62 @@
+.hero {
+  position: relative;
+  min-height: 560px;
+  color: #fff;
+  background: url("../img/Ecoride_hero.jpg") center/cover no-repeat;
+  // filtre sombre
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.45) 0%,
+      rgba(0, 0, 0, 0.35) 40%,
+      rgba(0, 0, 0, 0.45) 100%
+    );
+  }
+  .texte-hero{
+    font-size:20px;
+  }
+  .formulaire-hero{
+    background-color:#000000c9;
+    border-radius: 16px;
+  }
+
+  .hero-titre{
+    background-color:#000000c9;
+    border-radius: 16px;
+  }
+
+  .container,
+  .container-fluid,
+  .container-xl {
+    position: relative;
+    z-index: 1;
+  }
+
+  .form-label {
+    color: #fff;
+  }
+
+  .form-control {
+    border-radius: 0.75rem;
+    background-color: rgba(255, 255, 255, 0.95);
+    border: 0;
+  }
+}
+
+// Desktop spacing tweaks
+@media (min-width: 992px) {
+  .hero {
+    padding-top: 2.5rem;
+    padding-bottom: 2.5rem;
+  }
+}
+
+// Basic tablet/mobile fallbacks (kept light, focus is desktop)
+@media (max-width: 991.98px) {
+  .hero {
+    min-height: 480px;
+  }
+}
