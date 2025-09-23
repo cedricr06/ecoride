@@ -129,7 +129,7 @@ include_once __DIR__ . '/../includes/header.php';
               <?= (int)($user['credits'] ?? 0) ?> crédits
             </span>
           </div>
-          <p class="small infos-profil mt-2 mb-0">Gain de 2 crédits par passager transporté.</p>
+          
         </div>
       </div>
 
@@ -274,19 +274,31 @@ include_once __DIR__ . '/../includes/header.php';
                           <?= $v['eco'] ? 'Éco' : 'Standard' ?>
                         </span>
 
-                        <?php if (($v['statut'] ?? '') !== 'annule' && ($v['statut'] ?? '') !== 'valide'): ?>
-                          <form method="post"
-                            action="<?= e(BASE_URL . '/profil/voyages/' . (int)$v['id'] . '/valider') ?>"
-                            onsubmit="return confirm('Valider ce trajet et verser le paiement ?');"
-                            class="m-0">
-                            <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
-                            <button class="btn btn-success btn-sm">J’accepte</button>
-                          </form>
-                        <?php else: ?>
-                          <span class="badge <?= ($v['statut'] === 'valide' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger') ?>">
-                            <?= $v['statut'] === 'valide' ? 'Effectué' : 'Annulé' ?>
-                          </span>
-                        <?php endif; ?>
+                        <?php
+                        $statut = $v['statut'] ?? '';
+                        $hasStarted = !empty($v['has_started'] ?? false);
+                        $hasArrived = !empty($v['has_arrived'] ?? false);
+                        if ($hasArrived || $statut === 'valide') {
+                        ?>
+                          <span class="badge bg-success-subtle text-success">Effectuer</span>
+                        <?php
+                        } elseif ($statut === 'annule') {
+                          // Trajet annuler
+                        ?>
+                          <span class="badge bg-danger-subtle text-danger">Annuler</span>
+                        <?php
+                        } else {
+                            if (!$hasStarted) {
+                        ?>
+                              <span class="badge bg-warning-subtle text-warning">À démarrer</span>
+                        <?php
+                            } else {
+                        ?>
+                              <span class="badge bg-info-subtle text-info">En cours</span>
+                        <?php
+                            }
+                        }
+                        ?>
 
                         <form method="post"
                           action="<?= e(BASE_URL . '/profil/voyages/' . (int)$v['id'] . '/annuler') ?>"

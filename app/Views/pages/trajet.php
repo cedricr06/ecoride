@@ -118,6 +118,181 @@ if (!$pdo) {
 }
 
 // ---------------------------------------------------------------------
+// Gestion des actions POST (participer, démarrer, arriver)
+// ---------------------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    // CSRF protection
+    if (function_exists('verify_csrf')) verify_csrf();
+
+    $action = $_POST['action'];
+    $voyageId = filter_input(INPUT_POST, 'voyage_id', FILTER_VALIDATE_INT);
+    $currentUserId = $_SESSION['user']['id'] ?? null; // Assuming $userId is already set from session
+
+    if (!$voyageId || !$currentUserId) {
+        flash('error', 'Erreur: ID du trajet ou utilisateur manquant.');
+        header('Location: ' . url('trajet') . '?id=' . $id);
+        exit;
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        // Fetch trip details with FOR UPDATE
+        $stTrip = $pdo->prepare("SELECT id, chauffeur_id, prix, places_disponibles FROM voyages WHERE id=:v FOR UPDATE");
+        $stTrip->execute([':v' => $voyageId]);
+        $trip = $stTrip->fetch(PDO::FETCH_ASSOC);
+
+        if (!$trip) {
+            throw new RuntimeException('Trajet introuvable.');
+        }
+
+        if ($action === 'participer') {
+            // Blocking conditions
+            if ((int)$currentUserId === (int)$trip['chauffeur_id']) {
+                throw new RuntimeException('Vous ne pouvez pas participer à votre propre trajet.');
+            }
+            if ($trip['places_disponibles'] < 1) {
+                throw new RuntimeException('Plus de places disponibles pour ce trajet.');
+            }
+            $stCheck = $pdo->prepare("SELECT 1 FROM participations WHERE voyage_id = :v AND passager_id = :u AND statut IN ('en_attente','confirme') LIMIT 1");
+            $stCheck->execute([':v' => $voyageId, ':u' => $currentUserId]);
+            if ($stCheck->fetchColumn()) {
+                throw new RuntimeException('Vous participez déjà à ce trajet.');
+            }
+
+            $places = 1;
+            $prix = (int)$trip['prix'];
+            $total = $prix;
+
+            // Lock user credits
+            $stUser = $pdo->prepare("SELECT credits FROM utilisateurs WHERE id=:u FOR UPDATE");
+            $stUser->execute([':u' => $currentUserId]);
+            $userCredits = $stUser->fetchColumn();
+
+            if ($userCredits < $total) {
+                throw new RuntimeException('Crédits insuffisants pour participer à ce trajet.');
+            }
+
+            // Update user credits
+            $stUpdateUser = $pdo->prepare("UPDATE utilisateurs SET credits = credits - :total WHERE id=:u");
+            $stUpdateUser->execute([':total' => $total, ':u' => $currentUserId]);
+
+            // Update site wallet
+            $stUpdateWallet = $pdo->prepare("UPDATE site_wallet SET balance = balance + :total WHERE id=1");
+            $stUpdateWallet->execute([':total' => $total]);
+
+            // Insert debit transaction for user
+            $stInsertDebit = $pdo->prepare("INSERT INTO transactions (direction, reason, amount, user_id, voyage_id, created_at) VALUES ('debit','participation_pay',:total,:u,:v,NOW())");
+            $stInsertDebit->execute([':total' => $total, ':u' => $currentUserId, ':v' => $voyageId]);
+
+            // Insert credit transaction for site
+            $stInsertCredit = $pdo->prepare("INSERT INTO transactions (direction, reason, amount, user_id, voyage_id, created_at) VALUES ('credit','participation_pay',:total,NULL,:v,NOW())");
+            $stInsertCredit->execute([':total' => $total, ':v' => $voyageId]);
+
+            // Insert participation
+            $stInsertParticipation = $pdo->prepare("INSERT INTO participations (voyage_id, passager_id, places, prix, statut, inscrit_le) VALUES (:v,:u,1,:prix,'confirme',NOW())");
+            $stInsertParticipation->execute([':v' => $voyageId, ':u' => $currentUserId, ':prix' => $prix]);
+
+            // Update trip places and payout status
+            $stUpdateVoyage = $pdo->prepare("UPDATE voyages SET places_disponibles = places_disponibles - 1, payout_status = 'pending' WHERE id=:v");
+            $stUpdateVoyage->execute([':v' => $voyageId]);
+
+            $pdo->commit();
+            flash('success', 'Votre participation a été enregistrée avec succès.');
+
+        } elseif ($action === 'start_trip') {
+            if ((int)$currentUserId !== (int)$trip['chauffeur_id']) {
+                throw new RuntimeException('Vous n\'êtes pas le conducteur de ce trajet.');
+            }
+
+            // Check for idempotence: if driver_payout already exists
+            $stCheckPayout = $pdo->prepare("SELECT 1 FROM transactions WHERE voyage_id = :v AND reason = 'driver_payout' LIMIT 1");
+            $stCheckPayout->execute([':v' => $voyageId]);
+            if ($stCheckPayout->fetchColumn()) {
+                throw new RuntimeException('Le paiement pour ce trajet a déjà été effectué.');
+            }
+
+            // Calculate payout
+            $stParticipations = $pdo->prepare("SELECT COUNT(*) AS nb, COALESCE(SUM(prix), 0) AS paid FROM participations WHERE voyage_id = :v AND statut IN ('en_attente','confirme')");
+            $stParticipations->execute([':v' => $voyageId]);
+            $participationStats = $stParticipations->fetch(PDO::FETCH_ASSOC);
+
+            $nb = (int)$participationStats['nb'];
+            $paid = (int)$participationStats['paid'];
+
+            $commission_site = 2 * $nb;
+            $driver_payout = max(0, $paid - $commission_site);
+
+            // Update site wallet
+            $stUpdateWallet = $pdo->prepare("UPDATE site_wallet SET balance = balance - :driver_payout WHERE id=1");
+            $stUpdateWallet->execute([':driver_payout' => $driver_payout]);
+
+            // Update driver credits
+            $stUpdateDriver = $pdo->prepare("UPDATE utilisateurs SET credits = credits + :driver_payout WHERE id=:chauffeur");
+            $stUpdateDriver->execute([':driver_payout' => $driver_payout, ':chauffeur' => $trip['chauffeur_id']]);
+
+            // Insert debit transaction for site (driver_payout)
+            $stInsertDebitSite = $pdo->prepare("INSERT INTO transactions (direction, reason, amount, user_id, voyage_id, created_at) VALUES ('debit', 'driver_payout', :driver_payout, NULL, :v, NOW())");
+            $stInsertDebitSite->execute([':driver_payout' => $driver_payout, ':v' => $voyageId]);
+
+            // Insert credit transaction for driver (driver_payout)
+            $stInsertCreditDriver = $pdo->prepare("INSERT INTO transactions (direction, reason, amount, user_id, voyage_id, created_at) VALUES ('credit', 'driver_payout', :driver_payout, :chauffeur, :v, NOW())");
+            $stInsertCreditDriver->execute([':driver_payout' => $driver_payout, ':chauffeur' => $trip['chauffeur_id'], ':v' => $voyageId]);
+
+            // Insert credit transaction for site (site_commission)
+            $stInsertCommission = $pdo->prepare("INSERT INTO transactions (direction, reason, amount, user_id, voyage_id, created_at) VALUES ('credit','site_commission',:commission_site,NULL,:v,NOW())");
+            $stInsertCommission->execute([':commission_site' => $commission_site, ':v' => $voyageId]);
+
+            // Update voyage status
+            $stUpdateVoyage = $pdo->prepare("UPDATE voyages SET payout_status='released', payout_released_at=NOW() WHERE id=:v");
+            $stUpdateVoyage->execute([':v' => $voyageId]);
+
+            // Insert trip_started event
+            $stInsertTripStarted = $pdo->prepare("INSERT INTO transactions (direction, reason, amount, user_id, voyage_id, created_at) VALUES ('credit','trip_started',0,NULL,:v,NOW())");
+            $stInsertTripStarted->execute([':v' => $voyageId]);
+
+            $pdo->commit();
+            flash('success', 'Le trajet a démarré et le chauffeur a été payé.');
+
+        } elseif ($action === 'arrive_trip') {
+            if ((int)$currentUserId !== (int)$trip['chauffeur_id']) {
+                throw new RuntimeException('Vous n\'êtes pas le conducteur de ce trajet.');
+            }
+
+            // Check if trip_started exists and trip_arrived does not
+            $stCheckStarted = $pdo->prepare("SELECT 1 FROM transactions WHERE voyage_id = :v AND reason = 'trip_started' LIMIT 1");
+            $stCheckStarted->execute([':v' => $voyageId]);
+            if (!$stCheckStarted->fetchColumn()) {
+                throw new RuntimeException('Le trajet n\'a pas encore démarré.');
+            }
+
+            $stCheckArrived = $pdo->prepare("SELECT 1 FROM transactions WHERE voyage_id = :v AND reason = 'trip_arrived' LIMIT 1");
+            $stCheckArrived->execute([':v' => $voyageId]);
+            if ($stCheckArrived->fetchColumn()) {
+                throw new RuntimeException('Le trajet est déjà arrivé.');
+            }
+
+            // Insert trip_arrived event
+            $stInsertTripArrived = $pdo->prepare("INSERT INTO transactions (direction, reason, amount, user_id, voyage_id, created_at) VALUES ('credit','trip_arrived',0,NULL,:v,NOW())");
+            $stInsertTripArrived->execute([':v' => $voyageId]);
+
+            // Update voyage status
+            $stUpdateVoyage = $pdo->prepare("UPDATE voyages SET statut='valide' WHERE id=:v");
+            $stUpdateVoyage->execute([':v' => $voyageId]);
+
+            $pdo->commit();
+            flash('success', 'Le trajet est arrivé à destination.');
+        }
+
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        flash('error', "Erreur lors de l'action: " . $e->getMessage());
+    }
+    header('Location: ' . url('trajet') . '?id=' . $id);
+    exit;
+}
+
+// ---------------------------------------------------------------------
 // Session + utilisateur courant
 // ---------------------------------------------------------------------
 
@@ -131,170 +306,16 @@ $isDriver = false;
 $myParticipation = null;
 $placesTotal = 0;
 $placesRestantes = 0;
-
-
-
-
-// ---------------------------------------------------------------------
-// POST Participer
-// ---------------------------------------------------------------------
-$flash = function (string $type, string $msg) {
-  if (function_exists('flash')) {
-    flash($type, $msg);
-    return;
-  }
-  $_SESSION['__flash'][] = ['type' => $type, 'message' => $msg];
-};
-
-// Détection de la table de réservations/participants
-$detectTable = function (PDO $pdo, array $names): ?string {
-  foreach ($names as $name) {
-    try {
-      $st = $pdo->prepare('SHOW TABLES LIKE ?');
-      $st->execute([$name]);
-      if ($st->fetchColumn()) return $name;
-    } catch (Throwable $e) {
-      // ignore
-    }
-  }
-  return null;
-};
-
 $T_RES = 'participations';
-
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['action']) && $_POST['action'] === 'participer') {
-  if (function_exists('verify_csrf')) {
-    verify_csrf();
-  }
-
-  $userId = $_SESSION['user']['id'] ?? null; // adapte si ta session stocke différemment
-  if (empty($userId)) {
-    // Non connecté → redirection vers connexion avec redirect
-    $target = (function_exists('url') ? url('connexion') : '../connexion.php');
-    $cur = (function_exists('url') ? url('trajet') . '?id=' . $id : 'trajet.php?id=' . $id);
-    header('Location: ' . $target . '?redirect=' . urlencode($cur));
-    exit;
-  }
-
-  if ($T_RES === null) {
-    $flash('danger', "La fonctionnalité de réservation n'est pas configurée (table manquante). Contactez l'admin.");
-  } else {
-    // Récupère le trajet pour validations
-    $st = $pdo->prepare("SELECT id, chauffeur_id, places_disponibles FROM voyages WHERE id = :id LIMIT 1");
-    $st->execute([':id' => $id]);
-    $tripRow = $st->fetch(PDO::FETCH_ASSOC);
-    if (!$tripRow) {
-      $flash('danger', "Trajet introuvable.");
-    } else {
-      if ((int)$tripRow['chauffeur_id'] === (int)$userId) {
-        $flash('warning', "Vous ne pouvez pas réserver votre propre trajet.");
-      } else {
-        // Transaction simple : insérer une réservation + (optionnel) décrémenter places
-        try {
-          $pdo->beginTransaction();
-
-          // Empêche les surbookings si tu continues d’utiliser v.places_disponibles
-          $st2 = $pdo->prepare("SELECT places_disponibles FROM voyages WHERE id = :id FOR UPDATE");
-          $st2->execute([':id' => $id]);
-          $cur = $st2->fetchColumn();
-          if ($cur === false || (int)$cur <= 0) {
-            throw new RuntimeException('Plus de places disponibles.');
-          }
-
-          // Déjà inscrit ? (ignore les participations annulées)
-          $st3 = $pdo->prepare("SELECT 1 FROM {$T_RES} WHERE voyage_id = :v AND passager_id = :u AND statut IN ('en_attente','confirme') LIMIT 1");
-          $st3->execute([':v' => $id, ':u' => $userId]);
-          if ($st3->fetch()) {
-            throw new RuntimeException('Vous avez déjà une participation pour ce trajet.');
-          }
-
-          // Insert : inscrit_le a une valeur par défaut → pas besoin de le fournir
-          $st4 = $pdo->prepare("INSERT INTO {$T_RES} (voyage_id, passager_id, places, statut)
-                          VALUES (:v, :u, 1, 'en_attente')");
-          $st4->execute([':v' => $id, ':u' => $userId]);
-
-          // Si tu tiens à décrémenter v.places_disponibles tout de suite :
-          $st5 = $pdo->prepare("UPDATE voyages
-                          SET places_disponibles = places_disponibles - 1
-                          WHERE id = :id AND places_disponibles > 0");
-          $st5->execute([':id' => $id]);
-
-          $pdo->commit();
-          $flash('success', 'Votre demande de participation a été envoyée.');
-        } catch (Throwable $e) {
-          if ($pdo->inTransaction()) $pdo->rollBack();
-          // 1062 = doublon (UNIQUE (voyage_id, passager_id))
-          if (($e instanceof PDOException) && ($e->errorInfo[1] ?? null) == 1062) {
-            $flash('warning', "Vous êtes déjà inscrit sur ce trajet.");
-          } else {
-            $flash('danger', e($e->getMessage()));
-          }
-        }
-      }
-    }
-  }
-}
-
-
-// ---------------------------------------------------------------------
-// POST Annuler ma participation
-// ---------------------------------------------------------------------
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST'
-  && isset($_POST['action']) && $_POST['action'] === 'annuler'
-) {
-
-  if (function_exists('verify_csrf')) verify_csrf();
-
-  //  n’écrase pas $userId ici : on utilise celui calculé en haut
-  if (empty($userId)) {
-    $flash('danger', "Vous devez être connecté.");
-  } else {
-    try {
-      $pdo->beginTransaction();
-
-      // supprime UNE participation active pour ce voyage & cet utilisateur
-      $del = $pdo->prepare("
-        DELETE FROM {$T_RES}
-        WHERE voyage_id = :v AND passager_id = :u
-          AND statut IN ('en_attente','confirme')
-        LIMIT 1
-      ");
-      $del->execute([':v' => $id, ':u' => $userId]);
-
-      if ($del->rowCount() === 0) {
-        $pdo->rollBack();
-        $flash('warning', "Aucune participation active à annuler.");
-      } else {
-
-        $inc = $pdo->prepare("
-          UPDATE voyages
-          SET places_disponibles = places_disponibles + 1
-          WHERE id = :v
-        ");
-        $inc->execute([':v' => $id]);
-
-
-        $pdo->commit();
-        $flash('success', "Votre participation a été annulée.");
-        header('Location: ' . ((function_exists('url') ? url('trajet') : 'trajet.php') . '?id=' . $id));
-        exit;
-      }
-    } catch (Throwable $e) {
-      if ($pdo->inTransaction()) $pdo->rollBack();
-      $flash('danger', "Annulation impossible : " . e($e->getMessage()));
-    }
-  }
-}
 
 
 // ---------------------------------------------------------------------
 // Récupération des données du trajet
-// NOTE: Adapter les noms de tables/colonnes si votre schéma diffère
 // ---------------------------------------------------------------------
 $sqlTrip = "
   SELECT
     v.id, v.ville_depart, v.ville_arrivee,
-    v.date_depart, v.date_arrivee, v.prix, v.places_disponibles, v.ecologique,
+    v.date_depart, v.date_arrivee, v.prix, v.places_disponibles, v.ecologique, v.payout_status,
     u.id AS conducteur_id, u.pseudo, u.email,
     pr.date_naissance, pr.photo_url, pr.bio,
     ve.marque, ve.modele, ve.couleur, ve.energie, ve.places AS veh_places,
@@ -534,18 +555,46 @@ include_once __DIR__ . '/../includes/header.php';
             class="btn btn-outline-primary">Se connecter pour participer</a>
 
         <?php elseif ($isDriver): ?>
-          <button class="btn btn-success" disabled title="Vous êtes le conducteur">Participer</button>
+          <?php
+            $tripId = (int)$trip['id'];
+            $payoutStatus = $trip['payout_status'] ?? null;
+          ?>
+          <?php if ($payoutStatus === 'pending'): ?>
+            <form id="driver-action-form-<?= $tripId ?>"
+              action="<?= url('trajet') . '?id=' . $tripId ?>"
+              method="post"
+              class="d-inline">
+              <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
+              <input type="hidden" name="action" value="start_trip">
+              <input type="hidden" name="voyage_id" value="<?= $tripId ?>">
+              <button type="submit" class="btn btn-primary">Démarrer le trajet</button>
+            </form>
+          <?php elseif ($payoutStatus === 'released'): ?>
+            <form id="driver-action-form-<?= $tripId ?>"
+              action="<?= url('trajet') . '?id=' . $tripId ?>"
+              method="post"
+              class="d-inline">
+              <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
+              <input type="hidden" name="action" value="arrive_trip">
+              <input type="hidden" name="voyage_id" value="<?= $tripId ?>">
+              <button type="submit" class="btn btn-info">Arrivée du trajet</button>
+            </form>
+          <?php else: ?>
+            <button class="btn btn-secondary" disabled>Trajet terminé</button>
+          <?php endif; ?>
 
         <?php elseif (!$hasActiveParticipation): ?>
           <?php $tripId = (int)$trip['id']; ?>
           <form id="participer-form-<?= $tripId ?>"
+            action="<?= url('trajet') . '?id=' . $tripId ?>" 
             method="post"
             class="d-inline"
             data-trip-id="<?= $tripId ?>">
 
             <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
             <input type="hidden" name="action" value="participer">
-            <input type="hidden" name="id" value="<?= $tripId ?>"> <!-- utile si ton handler relit $_POST['id'] -->
+            <input type="hidden" name="voyage_id" value="<?= $tripId ?>">
+            <input type="hidden" name="places" value="1">
 
             <button type="button"
               class="btn btn-success"
@@ -557,29 +606,23 @@ include_once __DIR__ . '/../includes/header.php';
           </form>
 
           <!-- Modal de confirmation -->
-          <div class="modal fade"
-            id="confirmParticiper-<?= (int)$tripId ?>"
-            tabindex="-1"
-            aria-labelledby="confirmParticiperLabel-<?= (int)$tripId ?>"
-            aria-hidden="true"
-            data-trip-id="<?= (int)$tripId ?>">
-            ...
-            <button type="button" class="btn btn-primary js-confirm">Oui, je confirme</button>
-
+          <div class="modal fade" id="confirmParticiper-<?= (int)$tripId ?>" tabindex="-1" aria-labelledby="confirmParticiperLabel-<?= (int)$tripId ?>" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
               <div class="modal-content rounded-4">
-                <div class="modal-header">
-                  <h5 class="modal-title" id="confirmParticiperLabel-<?= $tripId ?>">Confirmer votre participation</h5>
-                  <button type="submit" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
-                </div>
-                <div class="modal-body">
-                  Voulez-vous vraiment participer à ce trajet ?
-                  <div class="small text-muted mt-2">Vous pourrez annuler selon les conditions prévues.</div>
-                </div>
-                <div class="modal-footer">
-                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Non</button>
-                  <button type="button" class="btn btn-primary js-confirm">Oui, je confirme</button>
-                </div>
+                
+                    <div class="modal-header">
+                      <h5 class="modal-title" id="confirmParticiperLabel-<?= $tripId ?>">Confirmer votre participation</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                    </div>
+                    <div class="modal-body">
+                      <p>Voulez-vous vraiment participer à ce trajet ?</p>
+                      <div class="small text-muted mt-2">Vous pourrez annuler selon les conditions prévues.</div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Non</button>
+                      <button type="button" class="btn btn-primary js-confirm-participation">Oui, je confirme</button>
+                    </div>
+                
               </div>
             </div>
           </div>
