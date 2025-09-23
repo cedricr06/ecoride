@@ -21,6 +21,9 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 COPY . /var/www/html
 
+# On ne garde pas le .env en prod : on utilise les variables d’environnement Railway
+RUN rm -f /var/www/html/.env
+
 # 5) Installer les dépendances APRES avoir activé ext-mongodb
 #    (si vendor/ N’EST PAS committé)
 RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
