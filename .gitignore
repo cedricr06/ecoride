@@ -30,3 +30,4 @@ Thumbs.db
 # Temporary migration scripts
 db_migration_*.php
 public/db_migration_*.php
+
