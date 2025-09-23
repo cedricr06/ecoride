@@ -1,5 +1,5 @@
 <?php
-/**
+/** 
  * Connexion PDO (singleton simple).
  * ⚠️ REMPLIS les identifiants ($host, $dbName, $user, $pass).
  */
