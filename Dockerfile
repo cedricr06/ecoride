@@ -24,3 +24,10 @@ COPY . /var/www/html
 # 5) Installer les dépendances APRES avoir activé ext-mongodb
 #    (si vendor/ N’EST PAS committé)
 RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+
+# écoute sur $PORT (fallback 8080) + ajuste le VirtualHost par défaut
+CMD ["bash","-lc","P=${PORT:-8080}; \
+  sed -i \"s/^Listen 80$/Listen ${P}/\" /etc/apache2/ports.conf && \
+  sed -i \"s#<VirtualHost \\*:80>#<VirtualHost *:${P}>#\" /etc/apache2/sites-available/000-default.conf && \
+  echo \"ServerName localhost\" >> /etc/apache2/apache2.conf && \
+  apache2-foreground"]
