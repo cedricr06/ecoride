@@ -1,5 +1,25 @@
 <?php
+// === Définition BASE_URL / BASE_URI + helpers ===
+$https  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+       || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+$scheme = $https ? 'https' : 'http';
+$host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
 
+$scriptDir = rtrim(str_replace('\\','/', dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php')), '/');
+$baseUri   = ($scriptDir === '' || $scriptDir === '/') ? '' : $scriptDir;
+
+if (!defined('BASE_URI')) define('BASE_URI', $baseUri);
+if (!defined('BASE_URL')) define('BASE_URL', $scheme.'://'.$host.$baseUri);
+
+if (!function_exists('asset')) {
+  function asset(string $p=''): string { return rtrim(BASE_URI, '/').'/assets/'.ltrim($p,'/'); }
+}
+if (!function_exists('url')) {
+  function url(string $p=''): string   { return rtrim(BASE_URL, '/').'/'.ltrim($p,'/'); }
+}
+if (!function_exists('e')) {
+  function e($v){ return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
+}
 
 /* ------------------------- Sessions sécurisées ------------------------- */
 $lifetime = 86400; // 24h
