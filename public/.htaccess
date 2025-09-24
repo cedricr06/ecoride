@@ -1,18 +1,19 @@
 <IfModule mod_rewrite.c>
-  RewriteEngine On
-  RewriteBase /
+    RewriteEngine On
 
-  # Servir les assets depuis /public/ quand on demande /assets|css|js|images|img|fonts|vendor
-  RewriteRule ^(assets|css|js|images|img|fonts|vendor)/(.*)$ public/$1/$2 [L]
+    #1) Bypass pour les fichiers statiques (évite les 500 sur CSS/JS/img)
+    RewriteRule ^(assets|css|js|images|img|fonts|vendor|favicon\.ico) - [L]
 
-  # Fichier/dossier existant -> pas de réécriture
-  RewriteCond %{REQUEST_FILENAME} -f [OR]
-  RewriteCond %{REQUEST_FILENAME} -d
-  RewriteRule ^ - [L]
+    #2) Si fichier/dossier réel -> on le sert
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
 
-  # Tout le reste vers public/index.php
-  RewriteRule ^ public/index.php [QSA,L]
+    #3) Accueil
+    RewriteRule ^$ index.php [QSA,L]
+
+    #4) Le reste vers le routeur (mode $_GET['url'])
+    RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]
 </IfModule>
-
 
 SetEnv MONGO_URI "mongodb+srv://cedricr06_db_user:PlSV8eHPyWmT58Yr@ecoride.vv1mgkr.mongodb.net/?retryWrites=true&w=majority&appName=ecoride"
