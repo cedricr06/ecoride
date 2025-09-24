@@ -8,7 +8,7 @@
         <?php if (!empty($errors['global'])): ?>
             <div class="alert alert-danger text-start"><?= e($errors['global']) ?></div>
         <?php endif; ?>
-        <form action="<?= BASE_URL ?>/connexion" method="post" novalidate>
+        <form action="<?= url('connexion') ?>" method="post" novalidate>
             <?= csrf_field() ?>
             <div class="mb-3 text-start">
                 <label for="email" class="form-label">Email</label>
