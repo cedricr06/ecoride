@@ -44,12 +44,12 @@
 
 
 <!-- JS bootstrap -->
-<script src="<?= BASE_URL ?>/assets/JS/bootstrap.bundle.min.js"></script>
+<script src="<?= asset('JS/bootstrap.bundle.min.js')?>"></script>
 
 <!-- Js personnel-->
-<script src="<?= BASE_URL ?>/assets/JS/script.js"></script>
+<script src="<?= asset('JS/script.js') ?>"></script>
 <!-- Script de la page Trajet -->
-<script src="<?= BASE_URL ?>/assets/js/trajet.js"></script>
+<script src="<?= asset('js/trajet.js') ?>"></script>
 
 </body>
 </html>
