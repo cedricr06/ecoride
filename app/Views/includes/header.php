@@ -11,10 +11,10 @@ $base = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\') . '/';
 
     <title>EcoRide</title>
     <!-- Bootstrap -->
-    <link rel="stylesheet" href="/Projet_ecoride/node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/bootstrap.min.css">
 
     <!-- CSS personnel -->
-    <link rel="stylesheet" href="/Projet_ecoride/public/assets/css/style.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=<?= time() ?>">
 
     <!-- Optimisation : pré-connexion -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
