@@ -6,15 +6,17 @@ $base = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\') . '/';
 <html lang="fr">
 
 <head>
+    <base href="<?= e(BASE_URL) ?>/">
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>EcoRide</title>
     <!-- Bootstrap -->
-    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="<?= asset('css/bootstrap.min.css')?>">
 
     <!-- CSS personnel -->
-    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=<?= time() ?>">
+    <link rel="stylesheet" href="<?= asset('css/style.css?v=<?= time()')?>">
 
     <!-- Optimisation : pré-connexion -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,7 +25,7 @@ $base = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\') . '/';
     <!-- Poppins + Roboto -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,200..900;1,200..900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 
-    <script src="<?= BASE_URL ?>/assets/js/profil.js" defer></script>
+    <script src="<?= asset('js/profil.js')?>" defer></script>
 </head>
 
 <body>

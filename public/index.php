@@ -2,8 +2,10 @@
 // ------------------------------
 // Constantes & bootstrap
 // ------------------------------
-define('BASE_PATH', dirname(__DIR__));            // racine projet
-define('BASE_URL', '/Projet_ecoride/public');     // préfixe URL publique (adapter si besoin)
+// 1) Racine du projet (parent de /public)
+if (!defined('BASE_PATH')) {
+    define('BASE_PATH', realpath(__DIR__ . '/..'));
+}
 
 require_once BASE_PATH . '/vendor/autoload.php';
 
