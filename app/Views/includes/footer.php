@@ -49,7 +49,7 @@
 <!-- Js personnel-->
 <script src="<?= asset('JS/script.js') ?>"></script>
 <!-- Script de la page Trajet -->
-<script src="<?= asset('js/trajet.js') ?>"></script>
+<script src="<?= asset('JS/trajet.js') ?>"></script>
 
 </body>
 </html>
