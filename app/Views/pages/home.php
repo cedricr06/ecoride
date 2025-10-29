@@ -53,7 +53,7 @@
     <div class="row gx-0 justify-content-center">
       <div class="col-12 col-md-4 mb-4 avantage px-3  ">
         <div class="icon-wrapper">
-          <img class="icon-avantage" src="/Projet_ecoride/public/assets/img/icon_accueil/globe-americas-fill.svg" alt="icon globe">
+          <img class="icon-avantage" src="assets/img/icon_accueil/globe-americas-fill.svg" alt="icon globe">
         </div>
         <h2>Ecologique</h2>
         <p class="texte-avantage">Favorisez les trajets en voiture éléctrique et réduisez votre empreinte carbonne.</p>
@@ -61,7 +61,7 @@
 
       <div class="col-12 col-md-4 mb-4 avantage">
         <div class="icon-wrapper">
-          <img class="icon-avantage" src="/Projet_ecoride/public/assets/img/icon_accueil/wallet2.svg" alt="icon portefeuille">
+          <img class="icon-avantage" src="assets/img/icon_accueil/wallet2.svg" alt="icon portefeuille">
         </div>
         <h2>Economique</h2>
         <p class="texte-avantage">Partagez vos frais de transport et voyagez à petit prix.</p>
@@ -69,7 +69,7 @@
 
       <div class="col-12 col-md-4 mb-4 avantage">
         <div class="icon-wrapper">
-          <img class="icon-avantage" src="/Projet_ecoride/public/assets/img/icon_accueil/check-square-fill.svg" alt="icon valider">
+          <img class="icon-avantage" src="assets/img/icon_accueil/check-square-fill.svg" alt="icon valider">
         </div>
         <h2>Fiable</h2>
         <p class="texte-avantage">Conducteurs notés, trajets vérifiés, paiement sécurisé.</p>
@@ -86,7 +86,7 @@
   <div class="container d-flex align-items-center">
     <div class="row align-items-center justify-content-center w-100 g-4 text-start ">
       <div class="col-12 col-md-6 text-center mb-4 mb-md-0 ">
-        <img src="/Projet_ecoride/public/assets/img/electric-car.jpg" alt="voiture electrique" class="img-fluid presentation-img">
+        <img src="assets/img/electric-car.jpg" alt="voiture electrique" class="img-fluid presentation-img">
       </div>
       <div class="col-12 col-md-6 mb-4 mb-md-0  presentation-content ">
         <h2>Qui sommes<span style="color:#27AE60">-nous ?</span></h2>
