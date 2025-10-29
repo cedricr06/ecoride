@@ -1,12 +1,11 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS",
-    "buildCommand": "composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist --no-scripts"
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
   },
   "deploy": {
     "runtime": "V2",
-    "startCommand": "php -S 0.0.0.0:$PORT -t public public/index.php",
     "healthcheckPath": "/health.php",
     "healthcheckTimeout": 30,
     "restartPolicyType": "ON_FAILURE",

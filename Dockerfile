@@ -1,35 +1,38 @@
-ARG BUILD_ID=1
+# --- Base image
 FROM php:8.3-apache
 
-# 1) Paquets système + extensions PHP
+# --- 1) Paquets + extensions PHP
 RUN apt-get update && apt-get install -y libssl-dev pkg-config git unzip \
- && docker-php-ext-install pdo pdo_mysql \
- && pecl install mongodb \
- && docker-php-ext-enable mongodb \
- && a2enmod rewrite \
- && rm -rf /var/lib/apt/lists/*
+    && docker-php-ext-install pdo pdo_mysql \
+    && pecl install mongodb \
+    && docker-php-ext-enable mongodb \
+    && a2enmod rewrite \
+    && rm -rf /var/lib/apt/lists/*
 
-# 2) DocumentRoot + AllowOverride
+# --- 2) Docroot = public + AllowOverride All (pour .htaccess)
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf /etc/apache2/apache2.conf \
- && printf "\n<Directory ${APACHE_DOCUMENT_ROOT}>\n\tAllowOverride All\n</Directory>\n" >> /etc/apache2/apache2.conf
+    && printf "\n<Directory ${APACHE_DOCUMENT_ROOT}>\n    AllowOverride All\n</Directory>\n" >> /etc/apache2/apache2.conf
 
-# 3) Composer (si tu n’as pas committé vendor/)
+# --- 3) Composer (si vendor/ n'est pas committé)
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# 4) Code
+# --- 4) Code
 WORKDIR /var/www/html
 COPY . /var/www/html
 
+# On ne déploie jamais le .env local en prod
 RUN rm -f /var/www/html/.env
 
-# 5) Installer les dépendances APRES avoir activé ext-mongodb
-#    (si vendor/ N’EST PAS committé)
-RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+# --- 5) Dépendances PHP (prod)
+RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --no-scripts
 
-# écoute sur $PORT (fallback 8080) + ajuste le VirtualHost par défaut
-CMD ["bash","-lc","P=${PORT:-8080}; \
-  sed -i \"s/^Listen 80$/Listen ${P}/\" /etc/apache2/ports.conf && \
-  sed -i \"s#<VirtualHost \\*:80>#<VirtualHost *:${P}>#\" /etc/apache2/sites-available/000-default.conf && \
-  echo \"ServerName localhost\" >> /etc/apache2/apache2.conf && \
-  apache2-foreground"]
+# --- 6) Faire écouter Apache sur le port injecté par Railway ($PORT)
+#     (fallback sur 8080 en local Docker)
+ENV PORT=8080
+RUN sed -ri 's/^Listen 80/Listen ${PORT}/' /etc/apache2/ports.conf \
+    && sed -ri 's/:80>/:${PORT}>/' /etc/apache2/sites-available/000-default.conf \
+    && echo "ServerName localhost" >> /etc/apache2/apache2.conf
+
+EXPOSE ${PORT}
+CMD ["apache2-foreground"]
