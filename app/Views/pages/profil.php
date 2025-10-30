@@ -64,6 +64,14 @@ include_once __DIR__ . '/../includes/header.php';
               <?php if (!empty($profil['telephone'])): ?>
                 <li>Tél. : <?= e($profil['telephone']) ?></li>
               <?php endif; ?>
+              <li>
+                Note moyenne:
+                <?= $avgNote !== null
+                  ? starsHtml($avgNote) . '<span class="ms-1">' .
+                  number_format($avgNote, 1, ',', '') . ' / 5 &middot; ' .
+                  (int)$reviewsTotal . ' avis</span>'
+                  : 'Aucun avis' ?>
+              </li>
             </ul>
 
             <!-- Formulaire de changement d'avatar -->
@@ -129,7 +137,7 @@ include_once __DIR__ . '/../includes/header.php';
               <?= (int)($user['credits'] ?? 0) ?> crédits
             </span>
           </div>
-          
+
         </div>
       </div>
 
@@ -285,38 +293,39 @@ include_once __DIR__ . '/../includes/header.php';
                           <span class="badge bg-danger-subtle text-danger">Annulé</span>
 
                         <?php
-                        // Si le trajet est terminé (arrivé ou statut 'valide')
+                          // Si le trajet est terminé (arrivé ou statut 'valide')
                         } elseif ($hasArrived || $statut === 'valide') {
                         ?>
                           <span class="badge bg-success-subtle text-success">Terminé</span>
 
                         <?php
-                        // Si le trajet a démarré mais pas encore terminé
+                          // Si le trajet a démarré mais pas encore terminé
                         } elseif ($hasStarted) {
                         ?>
                           <span class="badge bg-warning-subtle text-warning">En cours</span>
 
                         <?php
-                        // Sinon, le trajet n'a pas encore démarré
+                          // Sinon, le trajet n'a pas encore démarré
                         } else {
                         ?>
                           <span class="badge bg-warning-subtle text-warning">À démarrer</span>
                         <?php
                         }
                         ?>
-                          
 
-                          <?php if (!$hasStarted): // N'afficher "Annuler" que si le trajet n'a pas démarré ?>
+
+                        <?php if (!$hasStarted): // N'afficher "Annuler" que si le trajet n'a pas démarré 
+                        ?>
                           <form method="post"
-                                action="<?= e(BASE_URL . '/profil/voyages/' . (int)$v['id'] . '/annuler') ?>"
-                                onsubmit="return confirm('Annuler ce trajet ?');"
-                                class="m-0">
+                            action="<?= e(BASE_URL . '/profil/voyages/' . (int)$v['id'] . '/annuler') ?>"
+                            onsubmit="return confirm('Annuler ce trajet ?');"
+                            class="m-0">
                             <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
                             <button class="btn btn-outline-danger btn-sm">Annuler</button>
                           </form>
-                          <?php endif; ?>
+                        <?php endif; ?>
                         <?php
-        
+
                         ?>
                       </div>
                     </div>

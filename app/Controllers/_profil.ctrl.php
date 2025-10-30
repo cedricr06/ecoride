@@ -571,6 +571,31 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
     $ctx = profile_prepare($db, $_SESSION['user'] ?? []);
 }
 
+// --- Ajout : récupération des notes et avis depuis MongoDB ---
+require_once __DIR__ . '/../../app/Services/AvisService.php';
+
+$avgNote = null;
+$reviewsTotal = 0;
+
+$driverId = (int)($_SESSION['user']['id'] ?? 0);
+if ($driverId > 0) {
+    try {
+        $svc   = new AvisService();
+        $stats = $svc->driverStats($driverId); // lit la collection driver_stats
+        if ($stats) {
+            $avgNote      = (float)($stats['avg_rating'] ?? 0);
+            $reviewsTotal = (int)($stats['count'] ?? 0);
+        }
+    } catch (Throwable $e) {
+        // silencieux pour ne pas casser le profil si Mongo est down
+        // error_log('[profil] stats mongo: '.$e->getMessage());
+    }
+}
+
+// Injecte dans le contexte pour la vue
+$ctx['avgNote']      = $avgNote;
+$ctx['reviewsTotal'] = $reviewsTotal;
+
 // --- Liste des participations actives de l'utilisateur (onglet Voyages)
 // Liste des participations actives (en_attente/confirmé)
 function profile_list_participations(PDO $db, int $uid): array
@@ -1389,5 +1414,20 @@ if (!function_exists('handle_trip_arrival')) {
             app_log("[avis][ERROR] " . $e->getMessage());
             if (function_exists('flash')) flash('danger', $e->getMessage());
         }
+    }
+}
+
+// --- Helper: charge la note moyenne et le nombre d'avis depuis Mongo ---
+if (!function_exists('load_driver_stats')) {
+    function load_driver_stats(int $driverId): array
+    {
+        require_once __DIR__ . '/../../app/Services/AvisService.php';
+        $svc   = new AvisService();
+        $stats = $svc->driverStats($driverId);
+
+        return [
+            'avgNote'      => $stats ? (float)$stats['avg_rating'] : null,
+            'reviewsTotal' => $stats ? (int)$stats['count']       : 0,
+        ];
     }
 }

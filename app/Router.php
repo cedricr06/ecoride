@@ -33,7 +33,7 @@ class Router
             // Expose global variables for the controller
             if (isset($GLOBALS['db']))       { $db = $GLOBALS['db']; }
             if (isset($GLOBALS['authUser'])) { $authUser = $GLOBALS['authUser']; }
-            require_once BASE_PATH . '/app/Controllers/ReviewsController.php';
+            require_once BASE_PATH . '/app/Controllers/_ReviewsController.php';
             $controller = new \App\Controllers\ReviewsController();
             if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $controller->submit($token);

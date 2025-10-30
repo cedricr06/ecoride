@@ -496,7 +496,7 @@ include_once __DIR__ . '/../includes/header.php';
   <a href="<?= function_exists('url') ? e(url('trajets')) : '../trajets.php' ?>" class="btn btn-outline-secondary btn-sm mb-3" aria-label="Retour à la liste">&larr; Retour</a>
 
   <!-- A. Informations du conducteur -->
-  <section class="card bg-dark text-white shadow rounded-4 mb-4" style="--bs-bg-opacity: .7; backdrop-filter: blur(2px);">
+  <section class="card shadow rounded-4 mb-4" style="--bs-bg-opacity: .7; backdrop-filter: blur(2px);">
     <div class="card-body">
       <div class="row g-3 align-items-center">
         <div class="col-auto">
@@ -516,10 +516,10 @@ include_once __DIR__ . '/../includes/header.php';
               <span class="text-success">&middot; <?= e($age) ?> ans</span>
             <?php endif; ?>
           </h5>
-          <ul class="mb-2 text-light" style="--bs-text-opacity:.9;">
+          <ul class="mb-2" style="--bs-text-opacity:.9;">
             <li>Permis depuis <em>inconnu</em></li>
             <li>Trajets réalisés: <em>—</em> &middot; Passagers: <em>—</em></li>
-            <li>Note moyenne: <?= $avgNote !== null ? starsHtml($avgNote) . ' <span class="ms-1">' . number_format($avgNote, 1, ',', '') . '</span>' : '—' ?></li>
+            <li>Note moyenne: <?= $avgNote !== null ? starsHtml($avgNote) . '<span class="ms-1">' . number_format($avgNote, 1, ',', '') . ' / 5</span>' : '...' ?></li>
             <li>Véhicule: <?= e(trim(($trip['marque'] ?? '') . ' ' . ($trip['modele'] ?? ''))) ?><?php if (!empty($trip['couleur'])): ?>, <?= e($trip['couleur']) ?><?php endif; ?><?php if (!empty($trip['energie'])): ?>, <?= e($trip['energie']) ?><?php endif; ?></li>
             <li>Préférences: Fumeur <?= isset($trip['fumeur']) ? ((int)$trip['fumeur'] ? 'autorisé' : 'non autorisé') : '—' ?></li>
           </ul>
@@ -653,54 +653,29 @@ include_once __DIR__ . '/../includes/header.php';
     </div>
   </section>
 
-  <!-- D. Derniers avis -->
+  <!-- D. Derniers avis (chargés dynamiquement) -->
   <section class="card shadow rounded-4 mb-4">
     <div class="card-body">
       <div class="d-flex align-items-center justify-content-between mb-2">
         <h5 class="card-title mb-0">Avis</h5>
-        <div>
-          <?php if ($avgNote !== null): ?>
-            <span class="me-2 align-middle"><?= starsHtml($avgNote) ?></span>
-            <span class="text-muted small align-middle">
-              <?= number_format($avgNote, 1, ',', '') ?> / 5 &middot; <?= (int)$reviewsTotal ?> avis
-            </span>
-          <?php else: ?>
-            <span class="text-muted small">Aucun avis pour le moment</span>
-          <?php endif; ?>
-        </div>
+        <div id="avis-head" class="text-muted small">Chargement des avis...</div>
       </div>
 
-      <?php if (!$reviews): ?>
-        <p class="text-muted-admin mb-0">Pas encore d'avis.</p>
-      <?php else: ?>
-        <?php foreach ($reviews as $r): ?>
-          <article class="mb-3 border-bottom pb-2">
-            <div class="d-flex align-items-center justify-content-between">
-              <strong><?= e($r['auteur_pseudo'] ?? 'Anonyme') ?></strong>
-              <span class="ms-2"><?= starsHtml($r['note'] ?? 0) ?></span>
-            </div>
-            <div class="text-muted-admin small mb-1">
-              <?php
-              try {
-                $d = new DateTime($r['created_at']);
-                echo e($d->format('d/m/Y H:i'));
-              } catch (Throwable $e) {
-                echo '';
-              }
-              ?>
-            </div>
-            <p class="mb-0">
-              <?= e((string)($r['commentaire'] ?? '')) ?>
-            </p>
-          </article>
-        <?php endforeach; ?>
-        <!-- si tu veux paginer/“voir plus”, ajoute un lien ici -->
-      <?php endif; ?>
+      <!-- Bouton de chargement -->
+      <button
+        type="button"
+        class="btn btn-outline-primary btn-sm mb-3"
+        data-action="voir-avis"
+        data-driver-id="<?= (int)$trajet['chauffeur_id'] ?>"
+        data-trip-id="<?= (int)$trajet['id'] ?>">
+        Voir les avis
+      </button>
+
+      <!-- Conteneur où le JS affichera les avis -->
+      <div id="avis-box" class="mt-2"></div>
     </div>
   </section>
 
 </main>
-
-
 
 <?php include_once __DIR__ . '/../includes/footer.php'; ?>
